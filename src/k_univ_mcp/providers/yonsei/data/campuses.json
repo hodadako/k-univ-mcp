@@ -1,0 +1,10 @@
+{
+  "dsCampsBusnsCd": [
+    {"engDeptNm": "Undergraduate Programs", "sysinstDivCd": "H1", "deptNm": "학부(신촌)", "deptCd": "s1"},
+    {"engDeptNm": "Graduate Programs", "sysinstDivCd": null, "deptNm": "대학원(신촌)", "deptCd": "s3"},
+    {"engDeptNm": null, "sysinstDivCd": null, "deptNm": "의료원(신촌)", "deptCd": "s7"},
+    {"engDeptNm": "Undergraduate Programs(mirae)", "sysinstDivCd": "H2", "deptNm": "학부(미래)", "deptCd": "s2"},
+    {"engDeptNm": "Graduate Programs(mirae)", "sysinstDivCd": null, "deptNm": "대학원(미래)", "deptCd": "s4"},
+    {"engDeptNm": null, "sysinstDivCd": null, "deptNm": "의료원(미래)", "deptCd": "s8"}
+  ]
+}

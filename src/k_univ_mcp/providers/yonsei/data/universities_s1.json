@@ -1,0 +1,19 @@
+{
+  "dsUnivCd": [
+    {"engDeptNm": "College of Liberal Arts", "sysinstDivCd": "H1", "deptNm": "문과대학", "deptCd": "s1101"},
+    {"engDeptNm": "College of Commerce and Economics", "sysinstDivCd": "H1", "deptNm": "상경대학", "deptCd": "s1102"},
+    {"engDeptNm": "College of Business", "sysinstDivCd": "H1", "deptNm": "경영대학", "deptCd": "s11021"},
+    {"engDeptNm": "College of Science", "sysinstDivCd": "H1", "deptNm": "이과대학", "deptCd": "s1103"},
+    {"engDeptNm": "College of Engineering", "sysinstDivCd": "H1", "deptNm": "공과대학", "deptCd": "s1104"},
+    {"engDeptNm": "College of Life System", "sysinstDivCd": "H1", "deptNm": "생명시스템대학", "deptCd": "s1105"},
+    {"engDeptNm": "College of AI", "sysinstDivCd": "H1", "deptNm": "인공지능융합대학", "deptCd": "s1106"},
+    {"engDeptNm": "College of Theology", "sysinstDivCd": "H1", "deptNm": "신과대학", "deptCd": "s1107"},
+    {"engDeptNm": "College of Social Science", "sysinstDivCd": "H1", "deptNm": "사회과학대학", "deptCd": "s1108"},
+    {"engDeptNm": "College of Music", "sysinstDivCd": "H1", "deptNm": "음악대학", "deptCd": "s1110"},
+    {"engDeptNm": "College of Sciences in Education", "sysinstDivCd": "H1", "deptNm": "교육과학대학", "deptCd": "s1111"},
+    {"engDeptNm": "College of Human Ecology", "sysinstDivCd": "H1", "deptNm": "생활과학대학", "deptCd": "s1112"},
+    {"engDeptNm": "Underwood International College", "sysinstDivCd": "H1", "deptNm": "언더우드국제대학", "deptCd": "s1125"},
+    {"engDeptNm": "College of Pharmacy", "sysinstDivCd": "H1", "deptNm": "약학대학", "deptCd": "s1135"},
+    {"engDeptNm": "Global Leaders College", "sysinstDivCd": "H1", "deptNm": "글로벌인재대학", "deptCd": "s1143"}
+  ]
+}
