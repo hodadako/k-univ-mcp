@@ -1,0 +1,13 @@
+.venv/
+venv/
+out/
+.playwright-mcp/
+playwright-mcp/
+.idea/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.DS_Store
+yonsei-handbook-snapshot.md
+yonsei-network.txt
