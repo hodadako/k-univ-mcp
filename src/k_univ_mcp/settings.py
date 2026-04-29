@@ -48,6 +48,15 @@ class AppSettings:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     )
+    gachon_cookie: str | None = None
+    gachon_timeout: int = 30
+    gachon_retry_total: int = 3
+    gachon_retry_backoff: float = 0.5
+    gachon_sleep_seconds: float = 0.2
+    gachon_user_agent: str = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    )
 
     @classmethod
     def from_env(cls, *, load_env: bool = True) -> "AppSettings":
@@ -98,6 +107,15 @@ class AppSettings:
             dongguk_session_refresh_retries=int(os.getenv("DONGGUK_SESSION_REFRESH_RETRIES", "1")),
             dongguk_user_agent=os.getenv(
                 "DONGGUK_USER_AGENT",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            ),
+            gachon_cookie=os.getenv("GACHON_COOKIE"),
+            gachon_timeout=int(os.getenv("GACHON_TIMEOUT", "30")),
+            gachon_retry_total=int(os.getenv("GACHON_RETRY_TOTAL", "3")),
+            gachon_retry_backoff=float(os.getenv("GACHON_RETRY_BACKOFF", "0.5")),
+            gachon_sleep_seconds=float(os.getenv("GACHON_SLEEP_SECONDS", "0.2")),
+            gachon_user_agent=os.getenv(
+                "GACHON_USER_AGENT",
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             ),
         )
