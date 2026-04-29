@@ -5,6 +5,7 @@ from pathlib import Path
 
 from k_univ_mcp.exporter import export_courses, print_json
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
+from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -81,6 +82,39 @@ def build_parser() -> argparse.ArgumentParser:
     dongguk_export.add_argument("--batch-size", type=int, default=None)
     dongguk_export.add_argument("--outdir", default=None)
 
+    gachon_parser = provider_parser.add_parser("gachon", help="Gachon provider commands")
+    gachon_commands = gachon_parser.add_subparsers(dest="command", required=True)
+
+    gachon_campuses = gachon_commands.add_parser("campuses", help="List Gachon campuses")
+    gachon_campuses.add_argument("--year", required=True)
+    gachon_campuses.add_argument("--semester", required=True)
+
+    gachon_universities = gachon_commands.add_parser("universities", help="List Gachon universities for a campus")
+    gachon_universities.add_argument("--campus", required=True)
+    gachon_universities.add_argument("--year", required=True)
+    gachon_universities.add_argument("--semester", required=True)
+
+    gachon_faculties = gachon_commands.add_parser("faculties", help="List Gachon faculties for a university")
+    gachon_faculties.add_argument("--campus", required=True)
+    gachon_faculties.add_argument("--univ", required=True)
+    gachon_faculties.add_argument("--year", required=True)
+    gachon_faculties.add_argument("--semester", required=True)
+
+    gachon_courses = gachon_commands.add_parser("courses", help="List Gachon courses for a faculty")
+    gachon_courses.add_argument("--year", required=True)
+    gachon_courses.add_argument("--semester", required=True)
+    gachon_courses.add_argument("--campus", required=True)
+    gachon_courses.add_argument("--univ", required=True)
+    gachon_courses.add_argument("--faculty", required=True)
+
+    gachon_export = gachon_commands.add_parser("export", help="Export Gachon courses")
+    gachon_export.add_argument("--year", required=True)
+    gachon_export.add_argument("--semester", required=True)
+    gachon_export.add_argument("--campus")
+    gachon_export.add_argument("--univ")
+    gachon_export.add_argument("--faculty")
+    gachon_export.add_argument("--outdir", default=None)
+
     return parser
 
 
@@ -153,6 +187,38 @@ def main(argv: list[str] | None = None) -> int:
                 batch_size=args.batch_size,
             )
             print_json(result)
+            return 0
+
+    if args.provider == "gachon":
+        service = create_gachon_service(settings)
+        if args.command == "campuses":
+            campuses = service.get_campuses(year=args.year, semester=args.semester)
+            print_json([campus.to_dict() for campus in campuses])
+            return 0
+        if args.command == "universities":
+            universities = service.get_universities(args.campus, year=args.year, semester=args.semester)
+            print_json([university.to_dict() for university in universities])
+            return 0
+        if args.command == "faculties":
+            faculties = service.get_faculties(args.campus, args.univ, year=args.year, semester=args.semester)
+            print_json([faculty.to_dict() for faculty in faculties])
+            return 0
+        if args.command == "courses":
+            courses = service.get_courses(args.year, args.semester, args.campus, args.univ, args.faculty)
+            print_json([course.to_dict() for course in courses])
+            return 0
+        if args.command == "export":
+            courses, raw_payloads = service.collect_courses(
+                year=args.year,
+                semester=args.semester,
+                campus_code=args.campus,
+                univ_code=args.univ,
+                faculty_code=args.faculty,
+            )
+            outdir = Path(args.outdir) if args.outdir else settings.output_dir
+            stem = f"gachon_{args.year}_{args.semester}"
+            artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
+            print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0
 
     parser.error(f"Unsupported command: {args.command}")

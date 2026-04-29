@@ -5,6 +5,7 @@ from typing import Any
 
 from k_univ_mcp.exporter import export_courses
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
+from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -20,6 +21,7 @@ def build_mcp_server(settings: AppSettings | None = None):
 
     yonsei_service = create_yonsei_service(app_settings)
     dongguk_service = create_dongguk_service(app_settings)
+    gachon_service = create_gachon_service(app_settings)
 
     @server.tool(name="yonsei_get_campuses")
     def yonsei_get_campuses(
@@ -139,6 +141,59 @@ def build_mcp_server(settings: AppSettings | None = None):
             batch_index=batch_index,
             batch_size=batch_size,
         )
+
+    @server.tool(name="gachon_get_campuses")
+    def gachon_get_campuses(
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [campus.to_dict() for campus in gachon_service.get_campuses(year=year, semester=semester)]
+
+    @server.tool(name="gachon_get_universities")
+    def gachon_get_universities(
+        campus_code: str,
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [university.to_dict() for university in gachon_service.get_universities(campus_code, year=year, semester=semester)]
+
+    @server.tool(name="gachon_get_faculties")
+    def gachon_get_faculties(
+        campus_code: str,
+        univ_code: str,
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [faculty.to_dict() for faculty in gachon_service.get_faculties(campus_code, univ_code, year=year, semester=semester)]
+
+    @server.tool(name="gachon_get_courses")
+    def gachon_get_courses(
+        year: str,
+        semester: str,
+        campus_code: str,
+        univ_code: str,
+        faculty_code: str,
+    ) -> list[dict[str, Any]]:
+        return [course.to_dict() for course in gachon_service.get_courses(year, semester, campus_code, univ_code, faculty_code)]
+
+    @server.tool(name="gachon_export_courses")
+    def gachon_export_courses(
+        year: str,
+        semester: str,
+        outdir: str,
+        campus_code: str | None = None,
+        univ_code: str | None = None,
+        faculty_code: str | None = None,
+    ) -> dict[str, Any]:
+        courses, raw_payloads = gachon_service.collect_courses(
+            year=year,
+            semester=semester,
+            campus_code=campus_code,
+            univ_code=univ_code,
+            faculty_code=faculty_code,
+        )
+        artifacts = export_courses(courses, Path(outdir), f"gachon_{year}_{semester}", raw_payloads=raw_payloads)
+        return {"artifacts": artifacts, "row_count": len(courses)}
 
     return server
 
