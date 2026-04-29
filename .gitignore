@@ -1,6 +1,7 @@
 .venv/
 venv/
 out/
+exports/
 .playwright-mcp/
 playwright-mcp/
 .idea/
