@@ -1,15 +1,44 @@
 from __future__ import annotations
 
+import asyncio
 import importlib
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Callable, Literal, Protocol, TypeVar
+
+T = TypeVar("T")
 
 
 class BrowserBootstrapError(RuntimeError):
     pass
+
+
+def run_sync_in_playwright_worker(func: Callable[[], T]) -> T:
+    try:
+        _ = asyncio.get_running_loop()
+    except RuntimeError:
+        return func()
+
+    result: dict[str, T] = {}
+    error: dict[str, BaseException] = {}
+
+    def runner() -> None:
+        try:
+            result["value"] = func()
+        except BaseException as exc:
+            error["value"] = exc
+
+    thread = threading.Thread(target=runner, name="playwright-bootstrap-worker", daemon=True)
+    thread.start()
+    thread.join()
+
+    if "value" in error:
+        raise error["value"]
+
+    return result["value"]
 
 
 class BrowserCookieCollector(Protocol):
@@ -72,6 +101,9 @@ class PlaywrightCookieCollector:
         )
 
     def collect(self, target: BrowserBootstrapTarget, settings: BrowserBootstrapSettings) -> dict[str, str]:
+        return run_sync_in_playwright_worker(lambda: self._collect_sync(target, settings))
+
+    def _collect_sync(self, target: BrowserBootstrapTarget, settings: BrowserBootstrapSettings) -> dict[str, str]:
         try:
             playwright_sync_api = importlib.import_module("playwright.sync_api")
         except ImportError as exc:

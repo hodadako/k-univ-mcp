@@ -1,4 +1,11 @@
-from k_univ_mcp.browser_bootstrap import BrowserBootstrapError, ensure_playwright_chromium_installed, serialize_cookie_header
+import asyncio
+
+from k_univ_mcp.browser_bootstrap import (
+    BrowserBootstrapError,
+    ensure_playwright_chromium_installed,
+    run_sync_in_playwright_worker,
+    serialize_cookie_header,
+)
 from k_univ_mcp.providers.yonsei.bootstrap import EnvCookieBootstrap, YonseiBootstrapError, parse_cookie_header
 
 
@@ -60,3 +67,21 @@ def test_ensure_playwright_chromium_installed_raises_on_failure(monkeypatch) -> 
         assert "install failed" in str(exc)
     else:
         raise AssertionError("Expected automatic browser installation failure to raise BrowserBootstrapError.")
+
+
+def test_run_sync_in_playwright_worker_runs_directly_without_event_loop() -> None:
+    assert run_sync_in_playwright_worker(lambda: "ok") == "ok"
+
+
+def test_run_sync_in_playwright_worker_uses_worker_thread_inside_event_loop() -> None:
+    async def main() -> tuple[bool, str]:
+        def probe() -> tuple[bool, str]:
+            try:
+                _ = asyncio.get_running_loop()
+            except RuntimeError:
+                return True, "ok"
+            return False, "loop-present"
+
+        return run_sync_in_playwright_worker(probe)
+
+    assert asyncio.run(main()) == (True, "ok")
