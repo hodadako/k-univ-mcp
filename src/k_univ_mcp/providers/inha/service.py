@@ -21,22 +21,41 @@ class InhaService:
     def get_universities(self, campus_code: str, *, year: str, semester: str) -> list[University]:
         if campus_code != INHA_CAMPUS_CODE:
             return []
-        # Inha structure is flat for simplicity here, mapping everything to a single 'dept' university
-        return [University(campus_code=campus_code, code="dept", name="학부(과)")]
+
+        # Now using curriculum info to get real universities (colleges)
+        depts = self.client.fetch_departments_from_curriculum(year=year)
+        if not depts:
+             return [University(campus_code=campus_code, code="dept", name="학부(과)")]
+
+        univ_names = sorted(list(set(d["university"] for d in depts)))
+        return [
+            University(campus_code=campus_code, code=name, name=name)
+            for name in univ_names
+        ]
 
     def get_faculties(self, campus_code: str, univ_code: str, *, year: str, semester: str) -> list[Faculty]:
-        if campus_code != INHA_CAMPUS_CODE or univ_code != "dept":
+        if campus_code != INHA_CAMPUS_CODE:
             return []
-        depts = self.client.fetch_departments()
+
+        depts = self.client.fetch_departments_from_curriculum(year=year)
+        if not depts:
+             # Fallback
+             if univ_code == "dept":
+                 return [
+                     Faculty(campus_code=campus_code, university_code=univ_code, code=d["code"], name=d["name"])
+                     for d in self.client.fetch_departments()
+                 ]
+             return []
+
         return [
             Faculty(campus_code=campus_code, university_code=univ_code, code=d["code"], name=d["name"])
-            for d in depts
+            for d in depts if d["university"] == univ_code or univ_code == "dept"
         ]
 
     def get_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str) -> list[Course]:
         rows = self.client.fetch_courses(faculty_code, year=year, semester=semester)
 
-        # Get faculty name for context
+        # Try to find faculty name
         faculties = self.get_faculties(campus_code, univ_code, year=year, semester=semester)
         faculty_name = next((f.name for f in faculties if f.code == faculty_code), faculty_code)
 
@@ -61,7 +80,7 @@ class InhaService:
                 campus_code=campus_code,
                 campus_name=INHA_CAMPUS_NAME,
                 university_code=univ_code,
-                university_name="학부(과)",
+                university_name=univ_code if univ_code != "dept" else "학부(과)",
                 faculty_code=faculty_code,
                 faculty_name=faculty_name
             ))
@@ -76,16 +95,19 @@ class InhaService:
         univ_code: str | None = None,
         faculty_code: str | None = None,
     ) -> tuple[list[Course], list[Any]]:
-        # For simplicity, if faculty_code is provided, just get those
         if faculty_code:
             res = self.get_courses(year, semester, campus_code or INHA_CAMPUS_CODE, univ_code or "dept", faculty_code)
             return res, []
 
-        # Otherwise collect all faculties if needed (might be slow)
         all_courses = []
-        faculties = self.get_faculties(INHA_CAMPUS_CODE, "dept", year=year, semester=semester)
+        if univ_code and univ_code != "dept":
+             faculties = self.get_faculties(INHA_CAMPUS_CODE, univ_code, year=year, semester=semester)
+        else:
+             # get all depts regardless of university
+             faculties = self.get_faculties(INHA_CAMPUS_CODE, "dept", year=year, semester=semester)
+
         for f in faculties:
-             all_courses.extend(self.get_courses(year, semester, INHA_CAMPUS_CODE, "dept", f.code))
+             all_courses.extend(self.get_courses(year, semester, INHA_CAMPUS_CODE, f.university_code, f.code))
 
         return all_courses, []
 

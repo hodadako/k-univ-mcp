@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -9,6 +10,7 @@ from bs4 import BeautifulSoup
 
 BASE_URL = "https://sugang.inha.ac.kr/sugang"
 SEARCH_PATH = "/SU_51001/Lec_Time_Search.aspx"
+CURRICULUM_PATH = "/SU_51001/curriculum.aspx"
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
@@ -45,7 +47,42 @@ class InhaClient:
 
         return form_data, soup
 
+    def fetch_departments_from_curriculum(self, year: str | None = None) -> list[dict[str, str]]:
+        url = f"{BASE_URL}{CURRICULUM_PATH}"
+        # We can try to send year as query param if needed, curriculum.aspx has a year selector
+        res = self.session.get(url, timeout=self.timeout)
+        res.raise_for_status()
+        soup = BeautifulSoup(res.text, 'html.parser')
+
+        table = soup.find('table', id='dgList')
+        if not table:
+            return []
+
+        depts = []
+        for tr in table.find_all('tr')[1:]:
+            tds = tr.find_all('td')
+            if len(tds) < 3:
+                continue
+
+            univ_name = tds[0].text.strip()
+            dept_name = tds[1].text.strip()
+            major_name = tds[2].text.strip()
+
+            btn = tr.find('input', type='button')
+            if btn and btn.get('onclick'):
+                # onclick="OpenPrint("0194|002")" -> "0194002"
+                match = re.search(r'OpenPrint\("(\d+)\|(\d+)"\)', btn.get('onclick'))
+                if match:
+                    code = match.group(1) + match.group(2)
+                    depts.append({
+                        "code": code,
+                        "name": f"{dept_name} / {major_name}",
+                        "university": univ_name
+                    })
+        return depts
+
     def fetch_departments(self) -> list[dict[str, str]]:
+        # Fallback to ddlDept if curriculum fails or for simple cases
         _, soup = self._get_initial_form()
         select = soup.find('select', id='ddlDept')
         if not select:
@@ -82,14 +119,12 @@ class InhaClient:
         # Step 3: Perform Search
         search_data = form_data_v2.copy()
 
-        # Determine search button based on hhdSrchGubun
         search_gubun = search_data.get('hhdSrchGubun', 'search1')
         search_btn = 'ibtnSearch1'
         if search_gubun == 'search2': search_btn = 'ibtnSearch2'
         elif search_gubun == 'search3': search_btn = 'ibtnSearch3'
 
         search_data[search_btn] = '조회'
-        # Clean up other buttons
         for b in ['ibtnSearch1', 'ibtnSearch2', 'ibtnSearch3']:
             if b != search_btn: search_data.pop(b, None)
 
