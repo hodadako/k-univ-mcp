@@ -4,12 +4,13 @@
 
 ## 지원 대학
 
-학교별로 상류 시스템이 제공하는 학기 코드와 실제 조회 가능한 학기는 다를 수 있습니다. 같은 학교라도 특정 연도나 계절학기에서 조회 범위가 달라질 수 있으니, 항상 해당 학교 시스템이 내려주는 값을 기준으로 확인하는 것이 안전합니다.
+학교별로 수강신청 시스템이 제공하는 학기 코드와 실제 조회 가능한 학기는 다를 수 있습니다. 같은 학교라도 특정 연도나 계절학기에서 조회 범위가 달라질 수 있으니, 항상 해당 학교 시스템이 내려주는 값을 기준으로 확인해야합니다.
 
-| 대학교 | Provider | 조회 계층 | Export | 학기 입력 형식 | 비고 |
-| --- | --- | --- | --- | --- | --- |
-| 연세대학교 | `yonsei` | 캠퍼스 → 대학(원) → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 시드 fallback 일부 지원 |
+| 대학교 | Provider | 조회 계층 | Export | 학기 입력 형식 | 비고                                        |
+| --- | --- | --- | --- | --- |-------------------------------------------|
+| 연세대학교 | `yonsei` | 캠퍼스 → 대학(원) → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 신촌/미래 지원캠퍼스/대학(원) 목록은 시드 fallback 일부 지원   |
 | 동국대학교 | `dongguk` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` 또는 `semester=CM160.10` | 서울/WISE 지원, browser bootstrap 기반 live 세션 사용 |
+| 가천대학교 | `gachon` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요             |
 
 ## 설치
 
@@ -35,6 +36,12 @@ python -m k_univ_mcp.cli dongguk faculties --campus CM030.10 --univ DS0312 --yea
 python -m k_univ_mcp.cli dongguk courses --year 2026 --semester CM160.10 --campus CM030.10 --univ DS0312 --faculty DS031201
 python -m k_univ_mcp.cli dongguk universities --campus CM030.21 --year 2026 --semester 1
 python -m k_univ_mcp.cli dongguk export --year 2026 --semester 1 --batch-size 20 --outdir out
+
+python -m k_univ_mcp.cli gachon campuses --year 2026 --semester 10
+python -m k_univ_mcp.cli gachon universities --campus gachon-global --year 2026 --semester 10
+python -m k_univ_mcp.cli gachon faculties --campus gachon-global --univ COL01 --year 2026 --semester 10
+python -m k_univ_mcp.cli gachon courses --year 2026 --semester 10 --campus gachon-global --univ COL01 --faculty D001
+python -m k_univ_mcp.cli gachon export --year 2026 --semester 10 --campus gachon-global --outdir out
 ```
 
 ## MCP 도구
@@ -49,6 +56,11 @@ python -m k_univ_mcp.cli dongguk export --year 2026 --semester 1 --batch-size 20
 - `dongguk_get_faculties`
 - `dongguk_get_courses`
 - `dongguk_export_courses`
+- `gachon_get_campuses`
+- `gachon_get_universities`
+- `gachon_get_faculties`
+- `gachon_get_courses`
+- `gachon_export_courses`
 
 ## MCP 서버 실행
 
@@ -105,6 +117,30 @@ python -m k_univ_mcp.mcp_server
 
 </details>
 
+<details>
+<summary>가천대학교 (`gachon`)</summary>
+
+- 지원 캠퍼스
+  - 글로벌: `gachon-global` (`groupType=20`)
+  - 메디컬: `gachon-medical` (`groupType=21`)
+- 시작 페이지: `https://info.gachon.ac.kr/ssu/showTimetable.do`
+- 확인된 API 경로
+  - 초기 데이터 로드: `/Ssu1000q/onLoad.do`
+  - 학과 조회: `/Ssu1000q/deptList.do`
+  - 교과목 조회: `/Ssu1000q/mainSearch.do`
+- 학기 값은 모든 조회에서 직접 넘겨야 합니다.
+- 캠퍼스별 상위 조직은 `onLoad.do` 응답의 대학 목록을 기준으로 동적으로 찾습니다.
+- 가천대 조회에는 `WMONID`가 포함된 유효 세션이 필요하며, `GACHON_COOKIE`로 직접 주입할 수 있습니다.
+- 관련 환경 변수
+  - `GACHON_COOKIE`
+  - `GACHON_TIMEOUT`
+  - `GACHON_RETRY_TOTAL`
+  - `GACHON_RETRY_BACKOFF`
+  - `GACHON_SLEEP_SECONDS`
+  - `GACHON_USER_AGENT`
+
+</details>
+
 ## 문서
 
 - [환경 변수 문서](docs/environment-variables.md)
@@ -117,6 +153,4 @@ pytest
 ```
 
 ## 제한 사항
-
-- 브라우저 부트스트랩 인터페이스에는 Selenium 확장 지점을 열어뒀지만, 지금은 Playwright만 구현되어 있습니다.
 - 강의 시간 파싱은 best-effort 방식이라 완벽하지 않을 수 있습니다. 대신 원본 문자열은 항상 같이 보존합니다.
