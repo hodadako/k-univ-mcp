@@ -6,6 +6,7 @@ from pathlib import Path
 from k_univ_mcp.exporter import export_courses, print_json
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
+from k_univ_mcp.providers.inha import create_inha_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -115,6 +116,39 @@ def build_parser() -> argparse.ArgumentParser:
     gachon_export.add_argument("--faculty")
     gachon_export.add_argument("--outdir", default=None)
 
+    inha_parser = provider_parser.add_parser("inha", help="Inha provider commands")
+    inha_commands = inha_parser.add_subparsers(dest="command", required=True)
+
+    inha_campuses = inha_commands.add_parser("campuses", help="List Inha campuses")
+    inha_campuses.add_argument("--year", required=True)
+    inha_campuses.add_argument("--semester", required=True)
+
+    inha_universities = inha_commands.add_parser("universities", help="List Inha universities for a campus")
+    inha_universities.add_argument("--campus", required=True)
+    inha_universities.add_argument("--year", required=True)
+    inha_universities.add_argument("--semester", required=True)
+
+    inha_faculties = inha_commands.add_parser("faculties", help="List Inha faculties for a university")
+    inha_faculties.add_argument("--campus", required=True)
+    inha_faculties.add_argument("--univ", required=True)
+    inha_faculties.add_argument("--year", required=True)
+    inha_faculties.add_argument("--semester", required=True)
+
+    inha_courses = inha_commands.add_parser("courses", help="List Inha courses for a faculty")
+    inha_courses.add_argument("--year", required=True)
+    inha_courses.add_argument("--semester", required=True)
+    inha_courses.add_argument("--campus", required=True)
+    inha_courses.add_argument("--univ", required=True)
+    inha_courses.add_argument("--faculty", required=True)
+
+    inha_export = inha_commands.add_parser("export", help="Export Inha courses")
+    inha_export.add_argument("--year", required=True)
+    inha_export.add_argument("--semester", required=True)
+    inha_export.add_argument("--campus")
+    inha_export.add_argument("--univ")
+    inha_export.add_argument("--faculty")
+    inha_export.add_argument("--outdir", default=None)
+
     return parser
 
 
@@ -217,6 +251,38 @@ def main(argv: list[str] | None = None) -> int:
             )
             outdir = Path(args.outdir) if args.outdir else settings.output_dir
             stem = f"gachon_{args.year}_{args.semester}"
+            artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
+            print_json({"artifacts": artifacts, "row_count": len(courses)})
+            return 0
+
+    if args.provider == "inha":
+        service = create_inha_service()
+        if args.command == "campuses":
+            campuses = service.get_campuses(year=args.year, semester=args.semester)
+            print_json([campus.to_dict() for campus in campuses])
+            return 0
+        if args.command == "universities":
+            universities = service.get_universities(args.campus, year=args.year, semester=args.semester)
+            print_json([university.to_dict() for university in universities])
+            return 0
+        if args.command == "faculties":
+            faculties = service.get_faculties(args.campus, args.univ, year=args.year, semester=args.semester)
+            print_json([faculty.to_dict() for faculty in faculties])
+            return 0
+        if args.command == "courses":
+            courses = service.get_courses(args.year, args.semester, args.campus, args.univ, args.faculty)
+            print_json([course.to_dict() for course in courses])
+            return 0
+        if args.command == "export":
+            courses, raw_payloads = service.collect_courses(
+                year=args.year,
+                semester=args.semester,
+                campus_code=args.campus,
+                univ_code=args.univ,
+                faculty_code=args.faculty,
+            )
+            outdir = Path(args.outdir) if args.outdir else settings.output_dir
+            stem = f"inha_{args.year}_{args.semester}"
             artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
             print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0

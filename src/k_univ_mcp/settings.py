@@ -57,6 +57,8 @@ class AppSettings:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     )
+    inha_timeout: int = 30
+    inha_sleep_seconds: float = 0.5
 
     @classmethod
     def from_env(cls, *, load_env: bool = True) -> "AppSettings":
@@ -118,4 +120,6 @@ class AppSettings:
                 "GACHON_USER_AGENT",
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             ),
+            inha_timeout=int(os.getenv("INHA_TIMEOUT", "30")),
+            inha_sleep_seconds=float(os.getenv("INHA_SLEEP_SECONDS", "0.5")),
         )
