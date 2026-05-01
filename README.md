@@ -11,6 +11,7 @@
 | 연세대학교 | `yonsei` | 캠퍼스 → 대학(원) → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 신촌/미래 지원캠퍼스/대학(원) 목록은 시드 fallback 일부 지원   |
 | 동국대학교 | `dongguk` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` 또는 `semester=CM160.10` | 서울/WISE 지원, browser bootstrap 기반 live 세션 사용 |
 | 가천대학교 | `gachon` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요             |
+| 인하대학교 | `inha` | 캠퍼스 → 단과대학 → 학부(과) → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | 용현캠퍼스 지원, ASP.NET PostBack 기반 세션 사용 |
 
 ## 설치
 
@@ -42,6 +43,12 @@ python -m k_univ_mcp.cli gachon universities --campus gachon-global --year 2026 
 python -m k_univ_mcp.cli gachon faculties --campus gachon-global --univ COL01 --year 2026 --semester 10
 python -m k_univ_mcp.cli gachon courses --year 2026 --semester 10 --campus gachon-global --univ COL01 --faculty D001
 python -m k_univ_mcp.cli gachon export --year 2026 --semester 10 --campus gachon-global --outdir out
+
+python -m k_univ_mcp.cli inha campuses --year 2026 --semester 1
+python -m k_univ_mcp.cli inha universities --campus yonghyeon --year 2026 --semester 1
+python -m k_univ_mcp.cli inha faculties --campus yonghyeon --univ 공과대학 --year 2026 --semester 1
+python -m k_univ_mcp.cli inha courses --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002
+python -m k_univ_mcp.cli inha export --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002 --outdir out
 ```
 
 ## MCP 도구
@@ -61,6 +68,11 @@ python -m k_univ_mcp.cli gachon export --year 2026 --semester 10 --campus gachon
 - `gachon_get_faculties`
 - `gachon_get_courses`
 - `gachon_export_courses`
+- `inha_get_campuses`
+- `inha_get_universities`
+- `inha_get_faculties`
+- `inha_get_courses`
+- `inha_export_courses`
 
 ## MCP 서버 실행
 
@@ -138,6 +150,22 @@ python -m k_univ_mcp.mcp_server
   - `GACHON_RETRY_BACKOFF`
   - `GACHON_SLEEP_SECONDS`
   - `GACHON_USER_AGENT`
+
+</details>
+
+<details>
+<summary>인하대학교 (`inha`)</summary>
+
+- 지원 캠퍼스: 용현 (`yonghyeon`)
+- 시작 페이지: `https://sugang.inha.ac.kr/sugang/SU_51001/Lec_Time_Search.htm`
+- 확인된 API 경로
+  - 교과목 조회: `/SU_51001/Lec_Time_Search.aspx`
+  - 대학/학과 조회: `/SU_51001/curriculum.aspx`
+- 인하대는 ASP.NET WebForms 기반으로, `__VIEWSTATE`와 `__EVENTTARGET`을 이용한 PostBack 처리가 필요합니다.
+- 단과대학 및 학부(과) 계층 구조는 교과과정표를 분석하여 생성하며, 실제 수강신청 시스템의 분류를 따릅니다.
+- 관련 환경 변수
+  - `INHA_TIMEOUT`
+  - `INHA_SLEEP_SECONDS`
 
 </details>
 
