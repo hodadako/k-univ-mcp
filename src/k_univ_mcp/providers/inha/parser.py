@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from k_univ_mcp.models import Course, MeetingSlot
 from k_univ_mcp.providers.inha.models import InhaCourseRow
@@ -16,9 +15,10 @@ DAY_MAP = {
     "일": "7",
 }
 
+
 def parse_meeting_slots(time_location: str) -> list[MeetingSlot]:
     # Example: "월1,2,3(5-101)", "월1,2,화3(5-101)", "셀0(웹강의)"
-    slots = []
+    slots: list[MeetingSlot] = []
     if not time_location or "웹강의" in time_location:
         return slots
 
@@ -35,6 +35,7 @@ def parse_meeting_slots(time_location: str) -> list[MeetingSlot]:
                 slots.append(MeetingSlot(day_code=day_code, day_name=day_name, period=int(p)))
 
     return slots
+
 
 def build_course(
     row: InhaCourseRow,
@@ -70,7 +71,7 @@ def build_course(
         professor_name_english=None,
         lecture_time_raw=row.time_location,
         lecture_time_english_raw=None,
-        classroom=None, # Extracting classroom from time_location if needed
+        classroom=None,  # Extracting classroom from time_location if needed
         classroom_english=None,
         campus_display_name=campus_name,
         completion_division_name=row.category,

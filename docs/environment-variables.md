@@ -37,6 +37,11 @@
 - `DONGGUK_SLEEP_SECONDS`: 요청 사이 대기 시간
 - `DONGGUK_USER_AGENT`: 동국대 요청에 사용할 User-Agent
 
+## 인하대학교
+
+- `INHA_TIMEOUT`: 요청 timeout(초)
+- `INHA_SLEEP_SECONDS`: 요청 사이 대기 시간
+
 ## 참고
 
 - 대부분의 값은 기본값이 코드에 들어 있으므로 항상 설정할 필요는 없습니다.
