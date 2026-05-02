@@ -59,6 +59,12 @@ class AppSettings:
     )
     inha_timeout: int = 30
     inha_sleep_seconds: float = 0.5
+    hanyang_cookie: str | None = None
+    hanyang_timeout: int = 30
+    hanyang_sleep_seconds: float = 0.2
+    hanyang_pgm_id: str = "P310278"
+    hanyang_menu_id: str = "M006631"
+    hanyang_tk: str = ""
 
     @classmethod
     def from_env(cls, *, load_env: bool = True) -> "AppSettings":
@@ -122,4 +128,10 @@ class AppSettings:
             ),
             inha_timeout=int(os.getenv("INHA_TIMEOUT", "30")),
             inha_sleep_seconds=float(os.getenv("INHA_SLEEP_SECONDS", "0.5")),
+            hanyang_cookie=os.getenv("HANYANG_COOKIE"),
+            hanyang_timeout=int(os.getenv("HANYANG_TIMEOUT", "30")),
+            hanyang_sleep_seconds=float(os.getenv("HANYANG_SLEEP_SECONDS", "0.2")),
+            hanyang_pgm_id=os.getenv("HANYANG_PGM_ID", "P310278"),
+            hanyang_menu_id=os.getenv("HANYANG_MENU_ID", "M006631"),
+            hanyang_tk=os.getenv("HANYANG_TK", ""),
         )
