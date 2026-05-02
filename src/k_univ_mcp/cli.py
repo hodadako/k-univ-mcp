@@ -7,6 +7,7 @@ from k_univ_mcp.exporter import export_courses, print_json
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.ssu import create_ssu_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -149,6 +150,39 @@ def build_parser() -> argparse.ArgumentParser:
     inha_export.add_argument("--faculty")
     inha_export.add_argument("--outdir", default=None)
 
+    ssu_parser = provider_parser.add_parser("ssu", help="SSU provider commands")
+    ssu_commands = ssu_parser.add_subparsers(dest="command", required=True)
+
+    ssu_campuses = ssu_commands.add_parser("campuses", help="List SSU campuses")
+    ssu_campuses.add_argument("--year", required=True)
+    ssu_campuses.add_argument("--semester", required=True)
+
+    ssu_universities = ssu_commands.add_parser("universities", help="List SSU universities for a campus")
+    ssu_universities.add_argument("--campus", required=True)
+    ssu_universities.add_argument("--year", required=True)
+    ssu_universities.add_argument("--semester", required=True)
+
+    ssu_faculties = ssu_commands.add_parser("faculties", help="List SSU faculties for a university")
+    ssu_faculties.add_argument("--campus", required=True)
+    ssu_faculties.add_argument("--univ", required=True)
+    ssu_faculties.add_argument("--year", required=True)
+    ssu_faculties.add_argument("--semester", required=True)
+
+    ssu_courses = ssu_commands.add_parser("courses", help="List SSU courses for a faculty")
+    ssu_courses.add_argument("--year", required=True)
+    ssu_courses.add_argument("--semester", required=True)
+    ssu_courses.add_argument("--campus", required=True)
+    ssu_courses.add_argument("--univ", required=True)
+    ssu_courses.add_argument("--faculty", required=True)
+
+    ssu_export = ssu_commands.add_parser("export", help="Export SSU courses")
+    ssu_export.add_argument("--year", required=True)
+    ssu_export.add_argument("--semester", required=True)
+    ssu_export.add_argument("--campus")
+    ssu_export.add_argument("--univ")
+    ssu_export.add_argument("--faculty")
+    ssu_export.add_argument("--outdir", default=None)
+
     return parser
 
 
@@ -283,6 +317,38 @@ def main(argv: list[str] | None = None) -> int:
             )
             outdir = Path(args.outdir) if args.outdir else settings.output_dir
             stem = f"inha_{args.year}_{args.semester}"
+            artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
+            print_json({"artifacts": artifacts, "row_count": len(courses)})
+            return 0
+
+    if args.provider == "ssu":
+        service = create_ssu_service(settings)
+        if args.command == "campuses":
+            campuses = service.get_campuses(year=args.year, semester=args.semester)
+            print_json([campus.to_dict() for campus in campuses])
+            return 0
+        if args.command == "universities":
+            universities = service.get_universities(args.campus, year=args.year, semester=args.semester)
+            print_json([university.to_dict() for university in universities])
+            return 0
+        if args.command == "faculties":
+            faculties = service.get_faculties(args.campus, args.univ, year=args.year, semester=args.semester)
+            print_json([faculty.to_dict() for faculty in faculties])
+            return 0
+        if args.command == "courses":
+            courses = service.get_courses(args.year, args.semester, args.campus, args.univ, args.faculty)
+            print_json([course.to_dict() for course in courses])
+            return 0
+        if args.command == "export":
+            courses, raw_payloads = service.collect_courses(
+                year=args.year,
+                semester=args.semester,
+                campus_code=args.campus,
+                univ_code=args.univ,
+                faculty_code=args.faculty,
+            )
+            outdir = Path(args.outdir) if args.outdir else settings.output_dir
+            stem = f"ssu_{args.year}_{args.semester}"
             artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
             print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0

@@ -12,6 +12,7 @@
 | 동국대학교 | `dongguk` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` 또는 `semester=CM160.10` | 서울/WISE 지원, browser bootstrap 기반 live 세션 사용 |
 | 가천대학교 | `gachon` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요             |
 | 인하대학교 | `inha` | 캠퍼스 → 단과대학 → 학부(과) → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | 용현캠퍼스 지원, ASP.NET PostBack 기반 세션 사용 |
+| 숭실대학교 | `ssu` | 캠퍼스 → 대학 → 학부 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | SAP Web Dynpro 기반, Playwright 자동화 사용 |
 
 ## 설치
 
@@ -49,6 +50,12 @@ python -m k_univ_mcp.cli inha universities --campus yonghyeon --year 2026 --seme
 python -m k_univ_mcp.cli inha faculties --campus yonghyeon --univ 공과대학 --year 2026 --semester 1
 python -m k_univ_mcp.cli inha courses --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002
 python -m k_univ_mcp.cli inha export --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002 --outdir out
+
+python -m k_univ_mcp.cli ssu campuses --year 2026 --semester 1
+python -m k_univ_mcp.cli ssu universities --campus ssu --year 2026 --semester 1
+python -m k_univ_mcp.cli ssu faculties --campus ssu --univ ssu_all --year 2026 --semester 1
+python -m k_univ_mcp.cli ssu courses --year 2026 --semester 1 --campus ssu --univ ssu_all --faculty ssu_all
+python -m k_univ_mcp.cli ssu export --year 2026 --semester 1 --outdir out
 ```
 
 ## MCP 도구
@@ -73,6 +80,11 @@ python -m k_univ_mcp.cli inha export --year 2026 --semester 1 --campus yonghyeon
 - `inha_get_faculties`
 - `inha_get_courses`
 - `inha_export_courses`
+- `ssu_get_campuses`
+- `ssu_get_universities`
+- `ssu_get_faculties`
+- `ssu_get_courses`
+- `ssu_export_courses`
 
 ## MCP 서버 실행
 
@@ -166,6 +178,16 @@ python -m k_univ_mcp.mcp_server
 - 관련 환경 변수
   - `INHA_TIMEOUT`
   - `INHA_SLEEP_SECONDS`
+
+</details>
+
+<details>
+<summary>숭실대학교 (`ssu`)</summary>
+
+- 지원 캠퍼스: 숭실 (`ssu`)
+- 시작 페이지: `https://ecc.ssu.ac.kr/sap/bc/webdynpro/sap/zcmw2100?sap-language=KO`
+- 숭실대는 SAP Web Dynpro 기반으로 동작하며, Playwright를 이용한 브라우저 자동화 방식으로 데이터를 조회합니다.
+- 현재는 기본 검색 조건(전체 학부/학과)에 대한 조회를 지원합니다.
 
 </details>
 
