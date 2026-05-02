@@ -55,3 +55,15 @@ class HanyangCourseRow:
     @property
     def jojik_gb_nm(self) -> str | None:
         return self.raw.get("jojikGbNm")
+
+    @property
+    def isu_term_nm(self) -> str | None:
+        return self.raw.get("isuTermNm")
+
+    @property
+    def slg_sosok_cd(self) -> str | None:
+        return self.raw.get("slgSosokCd")
+
+    @property
+    def slg_sosok_nm(self) -> str | None:
+        return self.raw.get("slgSosokNm")
