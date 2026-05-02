@@ -5,7 +5,15 @@ from typing import Any
 
 
 @dataclass(slots=True)
-class SsuCourseRow:
+class SoongsilCatalogEntry:
+    college_code: str
+    college_name: str
+    department_code: str
+    department_name: str
+
+
+@dataclass(slots=True)
+class SoongsilCourseRow:
     plan: str
     completion_division_major: str
     completion_division_multimajor: str
