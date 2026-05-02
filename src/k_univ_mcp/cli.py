@@ -7,6 +7,7 @@ from k_univ_mcp.exporter import export_courses, print_json
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.soongsil import create_soongsil_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -149,6 +150,39 @@ def build_parser() -> argparse.ArgumentParser:
     inha_export.add_argument("--faculty")
     inha_export.add_argument("--outdir", default=None)
 
+    soongsil_parser = provider_parser.add_parser("soongsil", help="Soongsil provider commands")
+    soongsil_commands = soongsil_parser.add_subparsers(dest="command", required=True)
+
+    soongsil_campuses = soongsil_commands.add_parser("campuses", help="List Soongsil campuses")
+    soongsil_campuses.add_argument("--year", required=True)
+    soongsil_campuses.add_argument("--semester", required=True)
+
+    soongsil_universities = soongsil_commands.add_parser("universities", help="List Soongsil universities for a campus")
+    soongsil_universities.add_argument("--campus", required=True)
+    soongsil_universities.add_argument("--year", required=True)
+    soongsil_universities.add_argument("--semester", required=True)
+
+    soongsil_faculties = soongsil_commands.add_parser("faculties", help="List Soongsil faculties for a university")
+    soongsil_faculties.add_argument("--campus", required=True)
+    soongsil_faculties.add_argument("--univ", required=True)
+    soongsil_faculties.add_argument("--year", required=True)
+    soongsil_faculties.add_argument("--semester", required=True)
+
+    soongsil_courses = soongsil_commands.add_parser("courses", help="List Soongsil courses for a faculty")
+    soongsil_courses.add_argument("--year", required=True)
+    soongsil_courses.add_argument("--semester", required=True)
+    soongsil_courses.add_argument("--campus", required=True)
+    soongsil_courses.add_argument("--univ", required=True)
+    soongsil_courses.add_argument("--faculty", required=True)
+
+    soongsil_export = soongsil_commands.add_parser("export", help="Export Soongsil courses")
+    soongsil_export.add_argument("--year", required=True)
+    soongsil_export.add_argument("--semester", required=True)
+    soongsil_export.add_argument("--campus")
+    soongsil_export.add_argument("--univ")
+    soongsil_export.add_argument("--faculty")
+    soongsil_export.add_argument("--outdir", default=None)
+
     return parser
 
 
@@ -283,6 +317,38 @@ def main(argv: list[str] | None = None) -> int:
             )
             outdir = Path(args.outdir) if args.outdir else settings.output_dir
             stem = f"inha_{args.year}_{args.semester}"
+            artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
+            print_json({"artifacts": artifacts, "row_count": len(courses)})
+            return 0
+
+    if args.provider == "soongsil":
+        service = create_soongsil_service(settings)
+        if args.command == "campuses":
+            campuses = service.get_campuses(year=args.year, semester=args.semester)
+            print_json([campus.to_dict() for campus in campuses])
+            return 0
+        if args.command == "universities":
+            universities = service.get_universities(args.campus, year=args.year, semester=args.semester)
+            print_json([university.to_dict() for university in universities])
+            return 0
+        if args.command == "faculties":
+            faculties = service.get_faculties(args.campus, args.univ, year=args.year, semester=args.semester)
+            print_json([faculty.to_dict() for faculty in faculties])
+            return 0
+        if args.command == "courses":
+            courses = service.get_courses(args.year, args.semester, args.campus, args.univ, args.faculty)
+            print_json([course.to_dict() for course in courses])
+            return 0
+        if args.command == "export":
+            courses, raw_payloads = service.collect_courses(
+                year=args.year,
+                semester=args.semester,
+                campus_code=args.campus,
+                univ_code=args.univ,
+                faculty_code=args.faculty,
+            )
+            outdir = Path(args.outdir) if args.outdir else settings.output_dir
+            stem = f"soongsil_{args.year}_{args.semester}"
             artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
             print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0

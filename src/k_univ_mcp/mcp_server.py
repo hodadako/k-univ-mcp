@@ -7,6 +7,7 @@ from k_univ_mcp.exporter import export_courses
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.soongsil import create_soongsil_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -24,6 +25,7 @@ def build_mcp_server(settings: AppSettings | None = None):
     dongguk_service = create_dongguk_service(app_settings)
     gachon_service = create_gachon_service(app_settings)
     inha_service = create_inha_service()
+    soongsil_service = create_soongsil_service(app_settings)
 
     @server.tool(name="yonsei_get_campuses")
     def yonsei_get_campuses(
@@ -248,6 +250,59 @@ def build_mcp_server(settings: AppSettings | None = None):
             faculty_code=faculty_code,
         )
         artifacts = export_courses(courses, Path(outdir), f"inha_{year}_{semester}", raw_payloads=raw_payloads)
+        return {"artifacts": artifacts, "row_count": len(courses)}
+
+    @server.tool(name="soongsil_get_campuses")
+    def soongsil_get_campuses(
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [campus.to_dict() for campus in soongsil_service.get_campuses(year=year, semester=semester)]
+
+    @server.tool(name="soongsil_get_universities")
+    def soongsil_get_universities(
+        campus_code: str,
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [university.to_dict() for university in soongsil_service.get_universities(campus_code, year=year, semester=semester)]
+
+    @server.tool(name="soongsil_get_faculties")
+    def soongsil_get_faculties(
+        campus_code: str,
+        univ_code: str,
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [faculty.to_dict() for faculty in soongsil_service.get_faculties(campus_code, univ_code, year=year, semester=semester)]
+
+    @server.tool(name="soongsil_get_courses")
+    def soongsil_get_courses(
+        year: str,
+        semester: str,
+        campus_code: str,
+        univ_code: str,
+        faculty_code: str,
+    ) -> list[dict[str, Any]]:
+        return [course.to_dict() for course in soongsil_service.get_courses(year, semester, campus_code, univ_code, faculty_code)]
+
+    @server.tool(name="soongsil_export_courses")
+    def soongsil_export_courses(
+        year: str,
+        semester: str,
+        outdir: str,
+        campus_code: str | None = None,
+        univ_code: str | None = None,
+        faculty_code: str | None = None,
+    ) -> dict[str, Any]:
+        courses, raw_payloads = soongsil_service.collect_courses(
+            year=year,
+            semester=semester,
+            campus_code=campus_code,
+            univ_code=univ_code,
+            faculty_code=faculty_code,
+        )
+        artifacts = export_courses(courses, Path(outdir), f"soongsil_{year}_{semester}", raw_payloads=raw_payloads)
         return {"artifacts": artifacts, "row_count": len(courses)}
 
     return server
