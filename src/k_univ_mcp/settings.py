@@ -59,6 +59,8 @@ class AppSettings:
     )
     inha_timeout: int = 30
     inha_sleep_seconds: float = 0.5
+    sungshin_timeout: int = 30
+    sungshin_sleep_seconds: float = 0.5
 
     @classmethod
     def from_env(cls, *, load_env: bool = True) -> "AppSettings":
@@ -122,4 +124,6 @@ class AppSettings:
             ),
             inha_timeout=int(os.getenv("INHA_TIMEOUT", "30")),
             inha_sleep_seconds=float(os.getenv("INHA_SLEEP_SECONDS", "0.5")),
+            sungshin_timeout=int(os.getenv("SUNGSHIN_TIMEOUT", "30")),
+            sungshin_sleep_seconds=float(os.getenv("SUNGSHIN_SLEEP_SECONDS", "0.5")),
         )

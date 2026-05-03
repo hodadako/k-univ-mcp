@@ -6,7 +6,10 @@ from pathlib import Path
 from k_univ_mcp.exporter import export_courses, print_json
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
+import asyncio
+from k_univ_mcp.models import SearchParams
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.sungshin import create_sungshin_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -149,6 +152,14 @@ def build_parser() -> argparse.ArgumentParser:
     inha_export.add_argument("--faculty")
     inha_export.add_argument("--outdir", default=None)
 
+    sungshin_parser = provider_parser.add_parser("sungshin", help="Sungshin provider commands")
+    sungshin_commands = sungshin_parser.add_subparsers(dest="command", required=True)
+
+    sungshin_search = sungshin_commands.add_parser("search", help="Search Sungshin courses")
+    sungshin_search.add_argument("--query", required=True)
+    sungshin_search.add_argument("--year")
+    sungshin_search.add_argument("--semester")
+
     return parser
 
 
@@ -285,6 +296,14 @@ def main(argv: list[str] | None = None) -> int:
             stem = f"inha_{args.year}_{args.semester}"
             artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
             print_json({"artifacts": artifacts, "row_count": len(courses)})
+            return 0
+
+    if args.provider == "sungshin":
+        service = create_sungshin_service(settings)
+        if args.command == "search":
+            params = SearchParams(query=args.query, year=args.year, semester=args.semester)
+            courses = asyncio.run(service.search_courses(params))
+            print_json([course.to_dict() for course in courses])
             return 0
 
     parser.error(f"Unsupported command: {args.command}")

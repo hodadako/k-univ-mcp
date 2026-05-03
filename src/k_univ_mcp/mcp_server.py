@@ -7,6 +7,7 @@ from k_univ_mcp.exporter import export_courses
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.sungshin import create_sungshin_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -24,6 +25,7 @@ def build_mcp_server(settings: AppSettings | None = None):
     dongguk_service = create_dongguk_service(app_settings)
     gachon_service = create_gachon_service(app_settings)
     inha_service = create_inha_service()
+    sungshin_service = create_sungshin_service(app_settings)
 
     @server.tool(name="yonsei_get_campuses")
     def yonsei_get_campuses(
@@ -249,6 +251,27 @@ def build_mcp_server(settings: AppSettings | None = None):
         )
         artifacts = export_courses(courses, Path(outdir), f"inha_{year}_{semester}", raw_payloads=raw_payloads)
         return {"artifacts": artifacts, "row_count": len(courses)}
+
+    @server.tool(name="sungshin_search_courses")
+    async def sungshin_search_courses(
+        query: str,
+        year: str | None = None,
+        semester: str | None = None,
+        org_clsf_cd: str | None = None,
+        sbj_mng_cd: str | None = None,
+        obj_crs_cd: str | None = None,
+        dpt_mjr_cd: str | None = None,
+    ) -> list[dict[str, Any]]:
+        from k_univ_mcp.models import SearchParams
+        params = SearchParams(query=query, year=year, semester=semester)
+        courses = await sungshin_service.search_courses(
+            params,
+            org_clsf_cd=org_clsf_cd,
+            sbj_mng_cd=sbj_mng_cd,
+            obj_crs_cd=obj_crs_cd,
+            dpt_mjr_cd=dpt_mjr_cd,
+        )
+        return [course.to_dict() for course in courses]
 
     return server
 
