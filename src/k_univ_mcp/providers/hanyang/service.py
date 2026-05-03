@@ -110,7 +110,7 @@ class HanyangService:
                 data_list = payload[key][0].get("list", [])
                 rows.extend(data_list)
 
-        return [
+        courses = [
             build_course(
                 HanyangCourseRow(item),
                 year=year,
@@ -119,6 +119,14 @@ class HanyangService:
             )
             for item in rows
         ]
+
+        if univ_code and univ_code != campus_code:
+            courses = [c for c in courses if c.university_code == univ_code]
+
+        if faculty_code and faculty_code != campus_code:
+            courses = [c for c in courses if c.faculty_code == faculty_code]
+
+        return courses
 
     def collect_courses(
         self,
@@ -162,15 +170,21 @@ class HanyangService:
             )
 
             for item in data_list:
-                courses.append(
-                    build_course(
-                        HanyangCourseRow(item),
-                        year=year,
-                        semester=semester,
-                        org_code=campus.code,
-                        org_name=campus.name,
-                    )
+                course = build_course(
+                    HanyangCourseRow(item),
+                    year=year,
+                    semester=semester,
+                    org_code=campus.code,
+                    org_name=campus.name,
                 )
+
+                # Apply filters if provided
+                if univ_code and univ_code != campus.code and course.university_code != univ_code:
+                    continue
+                if faculty_code and faculty_code != campus.code and course.faculty_code != faculty_code:
+                    continue
+
+                courses.append(course)
 
         return courses, raw_payloads
 

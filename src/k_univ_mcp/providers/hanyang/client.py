@@ -124,7 +124,9 @@ class HanyangClient:
         for attempt in range(self.session_refresh_retries + 1):
             observed_cookie_header = self.cookie_header
             try:
-                response = session.post(url, params=params, json=json_data, timeout=self.timeout)
+                # Use data=json.dumps to preserve the 'application/json+sua' Content-Type header
+                # set in __post_init__. Using json= will override it to 'application/json'.
+                response = session.post(url, params=params, data=json.dumps(json_data), timeout=self.timeout)
                 payload = self._decode_response(path, response)
                 time.sleep(self.sleep_seconds)
                 return payload
