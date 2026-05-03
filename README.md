@@ -13,6 +13,7 @@
 | 가천대학교 | `gachon` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요             |
 | 인하대학교 | `inha` | 캠퍼스 → 단과대학 → 학부(과) → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | 용현캠퍼스 지원, ASP.NET PostBack 기반 세션 사용 |
 | 숭실대학교 | `soongsil` | 캠퍼스 → 대학 → 학부 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | SAP Web Dynpro 기반, Playwright 자동화 사용 |
+| 한양대학교 | `hanyang` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` (1학기), `15` (여름), `20` (2학기), `25` (겨울) | 서울/ERICA 지원, `tk` (token) 파라미터 필요 |
 
 ## 설치
 
@@ -85,6 +86,11 @@ python -m k_univ_mcp.cli soongsil export --year 2026 --semester 1 --outdir out
 - `soongsil_get_faculties`
 - `soongsil_get_courses`
 - `soongsil_export_courses`
+- `hanyang_get_campuses`
+- `hanyang_get_universities`
+- `hanyang_get_faculties`
+- `hanyang_get_courses`
+- `hanyang_export_courses`
 
 ## MCP 서버 실행
 
@@ -188,6 +194,27 @@ python -m k_univ_mcp.mcp_server
 - 시작 페이지: `https://ecc.ssu.ac.kr/sap/bc/webdynpro/sap/zcmw2100?sap-language=KO`
 - 숭실대는 SAP Web Dynpro 기반으로 동작하며, Playwright를 이용한 브라우저 자동화 방식으로 데이터를 조회합니다.
 - 단과대학 → 학과 계층을 동적으로 탐색해 교과목을 조회합니다.
+
+</details>
+
+<details>
+<summary>한양대학교 (`hanyang`)</summary>
+
+- 지원 캠퍼스
+  - 서울: `H0002256`
+  - ERICA: `H0002263`
+- 시작 페이지: `https://portal.hanyang.ac.kr/sugang/sulg.do`
+- 확인된 API 경로
+  - 교과목 조회: `/sugang/SgscAct/findSuupSearchSugangSiganpyo.do`
+  - 조직(프로그램) 조회: `/sugang/SgscAct/findPgmList.do`
+- 한양대는 `pgmId`, `menuId`, `tk` (token) 파라미터가 필요하며, 이는 브라우저 세션에서 추출해야 합니다.
+- 관련 환경 변수
+  - `HANYANG_COOKIE`
+  - `HANYANG_PGM_ID`
+  - `HANYANG_MENU_ID`
+  - `HANYANG_TK`
+  - `HANYANG_TIMEOUT`
+  - `HANYANG_SLEEP_SECONDS`
 
 </details>
 
