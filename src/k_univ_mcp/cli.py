@@ -8,7 +8,11 @@ from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.hanyang import create_hanyang_service
 from k_univ_mcp.providers.inha import create_inha_service
+<<<<<<< feature/sungshin-3693620942691553377
+from k_univ_mcp.providers.sungshin import create_sungshin_service
+=======
 from k_univ_mcp.providers.soongsil import create_soongsil_service
+>>>>>>> main
 from k_univ_mcp.providers.yonsei import create_yonsei_service
 from k_univ_mcp.settings import AppSettings
 
@@ -151,6 +155,40 @@ def build_parser() -> argparse.ArgumentParser:
     inha_export.add_argument("--faculty")
     inha_export.add_argument("--outdir", default=None)
 
+<<<<<<< feature/sungshin-3693620942691553377
+    sungshin_parser = provider_parser.add_parser("sungshin", help="Sungshin provider commands")
+    sungshin_commands = sungshin_parser.add_subparsers(dest="command", required=True)
+
+    sungshin_campuses = sungshin_commands.add_parser("campuses", help="List Sungshin campuses")
+    sungshin_campuses.add_argument("--year", required=True)
+    sungshin_campuses.add_argument("--semester", required=True)
+
+    sungshin_universities = sungshin_commands.add_parser("universities", help="List Sungshin universities for a campus")
+    sungshin_universities.add_argument("--campus", required=True)
+    sungshin_universities.add_argument("--year", required=True)
+    sungshin_universities.add_argument("--semester", required=True)
+
+    sungshin_faculties = sungshin_commands.add_parser("faculties", help="List Sungshin faculties for a university")
+    sungshin_faculties.add_argument("--campus", required=True)
+    sungshin_faculties.add_argument("--univ", required=True)
+    sungshin_faculties.add_argument("--year", required=True)
+    sungshin_faculties.add_argument("--semester", required=True)
+
+    sungshin_courses = sungshin_commands.add_parser("courses", help="List Sungshin courses for a faculty")
+    sungshin_courses.add_argument("--year", required=True)
+    sungshin_courses.add_argument("--semester", required=True)
+    sungshin_courses.add_argument("--campus", required=True)
+    sungshin_courses.add_argument("--univ", required=True)
+    sungshin_courses.add_argument("--faculty", required=True)
+
+    sungshin_export = sungshin_commands.add_parser("export", help="Export Sungshin courses")
+    sungshin_export.add_argument("--year", required=True)
+    sungshin_export.add_argument("--semester", required=True)
+    sungshin_export.add_argument("--campus")
+    sungshin_export.add_argument("--univ")
+    sungshin_export.add_argument("--faculty")
+    sungshin_export.add_argument("--outdir", default=None)
+=======
     soongsil_parser = provider_parser.add_parser("soongsil", help="Soongsil provider commands")
     soongsil_commands = soongsil_parser.add_subparsers(dest="command", required=True)
 
@@ -216,6 +254,7 @@ def build_parser() -> argparse.ArgumentParser:
     hanyang_export.add_argument("--univ")
     hanyang_export.add_argument("--faculty")
     hanyang_export.add_argument("--outdir", default=None)
+>>>>>>> main
 
     return parser
 
@@ -355,8 +394,13 @@ def main(argv: list[str] | None = None) -> int:
             print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0
 
+<<<<<<< feature/sungshin-3693620942691553377
+    if args.provider == "sungshin":
+        service = create_sungshin_service(settings)
+=======
     if args.provider == "soongsil":
         service = create_soongsil_service(settings)
+>>>>>>> main
         if args.command == "campuses":
             campuses = service.get_campuses(year=args.year, semester=args.semester)
             print_json([campus.to_dict() for campus in campuses])
@@ -382,6 +426,9 @@ def main(argv: list[str] | None = None) -> int:
                 faculty_code=args.faculty,
             )
             outdir = Path(args.outdir) if args.outdir else settings.output_dir
+<<<<<<< feature/sungshin-3693620942691553377
+            stem = f"sungshin_{args.year}_{args.semester}"
+=======
             stem = f"soongsil_{args.year}_{args.semester}"
             artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
             print_json({"artifacts": artifacts, "row_count": len(courses)})
@@ -415,6 +462,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             outdir = Path(args.outdir) if args.outdir else settings.output_dir
             stem = f"hanyang_{args.year}_{args.semester}"
+>>>>>>> main
             artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
             print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0

@@ -42,6 +42,11 @@
 - `INHA_TIMEOUT`: 요청 timeout(초)
 - `INHA_SLEEP_SECONDS`: 요청 사이 대기 시간
 
+## 성신여자대학교
+
+- `SUNGSHIN_TIMEOUT`: 요청 timeout(초)
+- `SUNGSHIN_SLEEP_SECONDS`: 요청 사이 대기 시간
+
 ## 참고
 
 - 대부분의 값은 기본값이 코드에 들어 있으므로 항상 설정할 필요는 없습니다.
