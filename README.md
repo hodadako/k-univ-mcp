@@ -12,7 +12,12 @@
 | 동국대학교 | `dongguk` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` 또는 `semester=CM160.10` | 서울/WISE 지원, browser bootstrap 기반 live 세션 사용 |
 | 가천대학교 | `gachon` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요             |
 | 인하대학교 | `inha` | 캠퍼스 → 단과대학 → 학부(과) → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | 용현캠퍼스 지원, ASP.NET PostBack 기반 세션 사용 |
+<<<<<<< feature/sungshin-3693620942691553377
 | 성신여자대학교 | `sungshin` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2025`, `semester=10` | 수정/운정캠퍼스 지원, AJAX 기반 JSON API 사용 |
+=======
+| 숭실대학교 | `soongsil` | 캠퍼스 → 대학 → 학부 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | SAP Web Dynpro 기반, Playwright 자동화 사용 |
+| 한양대학교 | `hanyang` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` (1학기), `15` (여름), `20` (2학기), `25` (겨울) | 서울/ERICA 지원, `tk` (token) 파라미터 필요 |
+>>>>>>> main
 
 ## 설치
 
@@ -51,11 +56,19 @@ python -m k_univ_mcp.cli inha faculties --campus yonghyeon --univ 공과대학 -
 python -m k_univ_mcp.cli inha courses --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002
 python -m k_univ_mcp.cli inha export --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002 --outdir out
 
+<<<<<<< feature/sungshin-3693620942691553377
 python -m k_univ_mcp.cli sungshin campuses --year 2025 --semester 10
 python -m k_univ_mcp.cli sungshin universities --campus COMM060.1 --year 2025 --semester 10
 python -m k_univ_mcp.cli sungshin faculties --campus COMM060.1 --univ COMM075.101 --year 2025 --semester 10
 python -m k_univ_mcp.cli sungshin courses --year 2025 --semester 10 --campus COMM060.1 --univ COMM075.101 --faculty 2170100
 python -m k_univ_mcp.cli sungshin export --year 2025 --semester 10 --campus COMM060.1 --univ COMM075.101 --faculty 2170100 --outdir out
+=======
+python -m k_univ_mcp.cli soongsil campuses --year 2026 --semester 1
+python -m k_univ_mcp.cli soongsil universities --campus soongsil --year 2026 --semester 1
+python -m k_univ_mcp.cli soongsil faculties --campus soongsil --univ soongsil_all --year 2026 --semester 1
+python -m k_univ_mcp.cli soongsil courses --year 2026 --semester 1 --campus soongsil --univ soongsil_all --faculty soongsil_all
+python -m k_univ_mcp.cli soongsil export --year 2026 --semester 1 --outdir out
+>>>>>>> main
 ```
 
 ## MCP 도구
@@ -80,11 +93,24 @@ python -m k_univ_mcp.cli sungshin export --year 2025 --semester 10 --campus COMM
 - `inha_get_faculties`
 - `inha_get_courses`
 - `inha_export_courses`
+<<<<<<< feature/sungshin-3693620942691553377
 - `sungshin_get_campuses`
 - `sungshin_get_universities`
 - `sungshin_get_faculties`
 - `sungshin_get_courses`
 - `sungshin_export_courses`
+=======
+- `soongsil_get_campuses`
+- `soongsil_get_universities`
+- `soongsil_get_faculties`
+- `soongsil_get_courses`
+- `soongsil_export_courses`
+- `hanyang_get_campuses`
+- `hanyang_get_universities`
+- `hanyang_get_faculties`
+- `hanyang_get_courses`
+- `hanyang_export_courses`
+>>>>>>> main
 
 ## MCP 서버 실행
 
@@ -182,6 +208,7 @@ python -m k_univ_mcp.mcp_server
 </details>
 
 <details>
+<<<<<<< feature/sungshin-3693620942691553377
 <summary>성신여자대학교 (`sungshin`)</summary>
 
 - 지원 캠퍼스: 수정 (`COMM060.1`), 운정 (`COMM060.2`)
@@ -194,6 +221,35 @@ python -m k_univ_mcp.mcp_server
 - 관련 환경 변수
   - `SUNGSHIN_TIMEOUT`
   - `SUNGSHIN_SLEEP_SECONDS`
+=======
+<summary>숭실대학교 (`soongsil`)</summary>
+
+- 지원 캠퍼스: 숭실 (`soongsil`)
+- 시작 페이지: `https://ecc.ssu.ac.kr/sap/bc/webdynpro/sap/zcmw2100?sap-language=KO`
+- 숭실대는 SAP Web Dynpro 기반으로 동작하며, Playwright를 이용한 브라우저 자동화 방식으로 데이터를 조회합니다.
+- 단과대학 → 학과 계층을 동적으로 탐색해 교과목을 조회합니다.
+
+</details>
+
+<details>
+<summary>한양대학교 (`hanyang`)</summary>
+
+- 지원 캠퍼스
+  - 서울: `H0002256`
+  - ERICA: `H0002263`
+- 시작 페이지: `https://portal.hanyang.ac.kr/sugang/sulg.do`
+- 확인된 API 경로
+  - 교과목 조회: `/sugang/SgscAct/findSuupSearchSugangSiganpyo.do`
+  - 조직(프로그램) 조회: `/sugang/SgscAct/findPgmList.do`
+- 한양대는 `pgmId`, `menuId`, `tk` (token) 파라미터가 필요하며, 이는 브라우저 세션에서 추출해야 합니다.
+- 관련 환경 변수
+  - `HANYANG_COOKIE`
+  - `HANYANG_PGM_ID`
+  - `HANYANG_MENU_ID`
+  - `HANYANG_TK`
+  - `HANYANG_TIMEOUT`
+  - `HANYANG_SLEEP_SECONDS`
+>>>>>>> main
 
 </details>
 
