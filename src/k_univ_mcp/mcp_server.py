@@ -252,26 +252,48 @@ def build_mcp_server(settings: AppSettings | None = None):
         artifacts = export_courses(courses, Path(outdir), f"inha_{year}_{semester}", raw_payloads=raw_payloads)
         return {"artifacts": artifacts, "row_count": len(courses)}
 
-    @server.tool(name="sungshin_search_courses")
-    async def sungshin_search_courses(
-        query: str,
-        year: str | None = None,
-        semester: str | None = None,
-        org_clsf_cd: str | None = None,
-        sbj_mng_cd: str | None = None,
-        obj_crs_cd: str | None = None,
-        dpt_mjr_cd: str | None = None,
+    @server.tool(name="sungshin_get_campuses")
+    def sungshin_get_campuses(
+        year: str,
+        semester: str,
     ) -> list[dict[str, Any]]:
-        from k_univ_mcp.models import SearchParams
-        params = SearchParams(query=query, year=year, semester=semester)
-        courses = await sungshin_service.search_courses(
-            params,
-            org_clsf_cd=org_clsf_cd,
-            sbj_mng_cd=sbj_mng_cd,
-            obj_crs_cd=obj_crs_cd,
-            dpt_mjr_cd=dpt_mjr_cd,
-        )
-        return [course.to_dict() for course in courses]
+        return [campus.to_dict() for campus in sungshin_service.get_campuses(year=year, semester=semester)]
+
+    @server.tool(name="sungshin_get_universities")
+    def sungshin_get_universities(
+        campus_code: str,
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [
+            university.to_dict()
+            for university in sungshin_service.get_universities(campus_code, year=year, semester=semester)
+        ]
+
+    @server.tool(name="sungshin_get_faculties")
+    def sungshin_get_faculties(
+        campus_code: str,
+        univ_code: str,
+        year: str,
+        semester: str,
+    ) -> list[dict[str, Any]]:
+        return [
+            faculty.to_dict()
+            for faculty in sungshin_service.get_faculties(campus_code, univ_code, year=year, semester=semester)
+        ]
+
+    @server.tool(name="sungshin_get_courses")
+    def sungshin_get_courses(
+        year: str,
+        semester: str,
+        campus_code: str,
+        univ_code: str,
+        faculty_code: str,
+    ) -> list[dict[str, Any]]:
+        return [
+            course.to_dict()
+            for course in sungshin_service.get_courses(year, semester, campus_code, univ_code, faculty_code)
+        ]
 
     return server
 

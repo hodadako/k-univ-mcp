@@ -64,7 +64,7 @@ class SungshinClient:
     def onload(self) -> dict[str, Any]:
         return self._post(ONLOAD_PATH)
 
-    def search_courses(
+    def fetch_courses(
         self,
         year: str,
         semester: str,

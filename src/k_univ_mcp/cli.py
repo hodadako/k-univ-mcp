@@ -6,8 +6,6 @@ from pathlib import Path
 from k_univ_mcp.exporter import export_courses, print_json
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
-import asyncio
-from k_univ_mcp.models import SearchParams
 from k_univ_mcp.providers.inha import create_inha_service
 from k_univ_mcp.providers.sungshin import create_sungshin_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
@@ -155,10 +153,27 @@ def build_parser() -> argparse.ArgumentParser:
     sungshin_parser = provider_parser.add_parser("sungshin", help="Sungshin provider commands")
     sungshin_commands = sungshin_parser.add_subparsers(dest="command", required=True)
 
-    sungshin_search = sungshin_commands.add_parser("search", help="Search Sungshin courses")
-    sungshin_search.add_argument("--query", required=True)
-    sungshin_search.add_argument("--year")
-    sungshin_search.add_argument("--semester")
+    sungshin_campuses = sungshin_commands.add_parser("campuses", help="List Sungshin campuses")
+    sungshin_campuses.add_argument("--year", required=True)
+    sungshin_campuses.add_argument("--semester", required=True)
+
+    sungshin_universities = sungshin_commands.add_parser("universities", help="List Sungshin universities for a campus")
+    sungshin_universities.add_argument("--campus", required=True)
+    sungshin_universities.add_argument("--year", required=True)
+    sungshin_universities.add_argument("--semester", required=True)
+
+    sungshin_faculties = sungshin_commands.add_parser("faculties", help="List Sungshin faculties for a university")
+    sungshin_faculties.add_argument("--campus", required=True)
+    sungshin_faculties.add_argument("--univ", required=True)
+    sungshin_faculties.add_argument("--year", required=True)
+    sungshin_faculties.add_argument("--semester", required=True)
+
+    sungshin_courses = sungshin_commands.add_parser("courses", help="List Sungshin courses for a faculty")
+    sungshin_courses.add_argument("--year", required=True)
+    sungshin_courses.add_argument("--semester", required=True)
+    sungshin_courses.add_argument("--campus", required=True)
+    sungshin_courses.add_argument("--univ", required=True)
+    sungshin_courses.add_argument("--faculty", required=True)
 
     return parser
 
@@ -300,9 +315,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.provider == "sungshin":
         service = create_sungshin_service(settings)
-        if args.command == "search":
-            params = SearchParams(query=args.query, year=args.year, semester=args.semester)
-            courses = asyncio.run(service.search_courses(params))
+        if args.command == "campuses":
+            campuses = service.get_campuses(year=args.year, semester=args.semester)
+            print_json([campus.to_dict() for campus in campuses])
+            return 0
+        if args.command == "universities":
+            universities = service.get_universities(args.campus, year=args.year, semester=args.semester)
+            print_json([university.to_dict() for university in universities])
+            return 0
+        if args.command == "faculties":
+            faculties = service.get_faculties(args.campus, args.univ, year=args.year, semester=args.semester)
+            print_json([faculty.to_dict() for faculty in faculties])
+            return 0
+        if args.command == "courses":
+            courses = service.get_courses(args.year, args.semester, args.campus, args.univ, args.faculty)
             print_json([course.to_dict() for course in courses])
             return 0
 

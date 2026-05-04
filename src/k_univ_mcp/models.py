@@ -145,10 +145,3 @@ class RawPayloadDump:
 
     def file_name(self) -> str:
         return f"{self.provider}_{self.year}_{self.semester}_{self.campus_code}_{self.university_code}_{self.faculty_code}.json"
-
-
-@dataclass(slots=True)
-class SearchParams:
-    query: str
-    year: str | None = None
-    semester: str | None = None
