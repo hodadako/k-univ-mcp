@@ -50,7 +50,7 @@ class SungshinClient:
     def _post(self, path: str, data: dict[str, Any] | None = None) -> Any:
         url = f"{BASE_URL}{path}"
         if self.session is None:
-             raise RuntimeError("Session is not initialized")
+            raise RuntimeError("Session is not initialized")
 
         try:
             response = self.session.post(url, data=data, timeout=self.timeout)

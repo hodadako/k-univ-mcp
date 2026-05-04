@@ -12,6 +12,7 @@
 | 동국대학교 | `dongguk` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` 또는 `semester=CM160.10` | 서울/WISE 지원, browser bootstrap 기반 live 세션 사용 |
 | 가천대학교 | `gachon` | 캠퍼스 → 대학 → 학과 → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=10` 같은 코드 | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요             |
 | 인하대학교 | `inha` | 캠퍼스 → 단과대학 → 학부(과) → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `year=2026`, `semester=1` | 용현캠퍼스 지원, ASP.NET PostBack 기반 세션 사용 |
+| 성신여자대학교 | `sungshin` | (검색) | JSON | `year=2025`, `semester=10` | 수정/운정캠퍼스 지원, AJAX 기반 JSON API 사용 |
 
 ## 설치
 
@@ -49,6 +50,8 @@ python -m k_univ_mcp.cli inha universities --campus yonghyeon --year 2026 --seme
 python -m k_univ_mcp.cli inha faculties --campus yonghyeon --univ 공과대학 --year 2026 --semester 1
 python -m k_univ_mcp.cli inha courses --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002
 python -m k_univ_mcp.cli inha export --year 2026 --semester 1 --campus yonghyeon --univ 공과대학 --faculty 0194002 --outdir out
+
+python -m k_univ_mcp.cli sungshin search --query "AI" --year 2025 --semester 10
 ```
 
 ## MCP 도구
@@ -73,6 +76,7 @@ python -m k_univ_mcp.cli inha export --year 2026 --semester 1 --campus yonghyeon
 - `inha_get_faculties`
 - `inha_get_courses`
 - `inha_export_courses`
+- `sungshin_search_courses`
 
 ## MCP 서버 실행
 
@@ -166,6 +170,21 @@ python -m k_univ_mcp.mcp_server
 - 관련 환경 변수
   - `INHA_TIMEOUT`
   - `INHA_SLEEP_SECONDS`
+
+</details>
+
+<details>
+<summary>성신여자대학교 (`sungshin`)</summary>
+
+- 지원 캠퍼스: 수정 (`COMM060.1`), 운정 (`COMM060.2`)
+- 시작 페이지: `https://sugang.sungshin.ac.kr/findBCRM02010.do`
+- 확인된 API 경로
+  - 교과목 검색: `/findBCRM02010Main.do`
+- 성신여대는 AJAX 기반의 JSON API를 사용하며, 검색 조건(학년도, 학기, 조직 등)을 POST 데이터로 전송합니다.
+- 학기 코드는 `COMM063.10`(1학기), `COMM063.20`(2학기) 형식을 사용합니다.
+- 관련 환경 변수
+  - `SUNGSHIN_TIMEOUT`
+  - `SUNGSHIN_SLEEP_SECONDS`
 
 </details>
 

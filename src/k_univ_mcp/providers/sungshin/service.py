@@ -12,7 +12,10 @@ class SungshinService:
 
     def get_campuses(self, year: str, semester: str):
         from k_univ_mcp.models import Campus
-        return [Campus(code="COMM060.1", name="수정", provider="sungshin")]
+        return [
+            Campus(code="COMM060.1", name="수정", provider="sungshin"),
+            Campus(code="COMM060.2", name="운정", provider="sungshin"),
+        ]
 
     def get_universities(self, campus_code: str, year: str, semester: str):
         from k_univ_mcp.models import University
