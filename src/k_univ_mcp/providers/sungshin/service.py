@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from k_univ_mcp.models import Course
+from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
 from k_univ_mcp.providers.sungshin.client import SungshinClient
 from k_univ_mcp.providers.sungshin.parser import build_course
 
@@ -85,6 +85,56 @@ class SungshinService:
             build_course(row, year=year, semester=sem_cd)
             for row in rows
         ]
+
+    def collect_courses(
+        self,
+        *,
+        year: str,
+        semester: str,
+        campus_code: str | None = None,
+        univ_code: str | None = None,
+        faculty_code: str | None = None,
+    ) -> tuple[list[Course], list[RawPayloadDump]]:
+        courses: list[Course] = []
+        raw_payloads: list[RawPayloadDump] = []
+
+        if semester == "1":
+            sem_cd = "COMM063.10"
+        elif semester == "2":
+            sem_cd = "COMM063.20"
+        elif "." not in semester:
+            sem_cd = f"COMM063.{semester}"
+        else:
+            sem_cd = semester
+
+        campuses = [c for c in self.get_campuses(year, semester) if campus_code in {None, c.code}]
+        for campus in campuses:
+            universities = [u for u in self.get_universities(campus.code, year, semester) if univ_code in {None, u.code}]
+            for university in universities:
+                faculties = [f for f in self.get_faculties(campus.code, university.code, year, semester) if faculty_code in {None, f.code}]
+                for faculty in faculties:
+                    rows = self.client.fetch_courses(
+                        year=year,
+                        semester=sem_cd,
+                        cmp_code=campus.code,
+                        org_clsf_code=university.code,
+                        dpt_mjr_code=faculty.code,
+                    )
+                    raw_payloads.append(
+                        RawPayloadDump(
+                            provider="sungshin",
+                            year=year,
+                            semester=sem_cd,
+                            campus_code=campus.code,
+                            university_code=university.code,
+                            faculty_code=faculty.code,
+                            payload=rows,
+                        )
+                    )
+                    for row in rows:
+                        courses.append(build_course(row, year=year, semester=sem_cd))
+
+        return courses, raw_payloads
 
 def create_sungshin_service(settings: Any = None) -> SungshinService:
     from k_univ_mcp.providers.sungshin.client import SungshinClient

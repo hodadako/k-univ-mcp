@@ -175,6 +175,14 @@ def build_parser() -> argparse.ArgumentParser:
     sungshin_courses.add_argument("--univ", required=True)
     sungshin_courses.add_argument("--faculty", required=True)
 
+    sungshin_export = sungshin_commands.add_parser("export", help="Export Sungshin courses")
+    sungshin_export.add_argument("--year", required=True)
+    sungshin_export.add_argument("--semester", required=True)
+    sungshin_export.add_argument("--campus")
+    sungshin_export.add_argument("--univ")
+    sungshin_export.add_argument("--faculty")
+    sungshin_export.add_argument("--outdir", default=None)
+
     return parser
 
 
@@ -330,6 +338,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "courses":
             courses = service.get_courses(args.year, args.semester, args.campus, args.univ, args.faculty)
             print_json([course.to_dict() for course in courses])
+            return 0
+        if args.command == "export":
+            courses, raw_payloads = service.collect_courses(
+                year=args.year,
+                semester=args.semester,
+                campus_code=args.campus,
+                univ_code=args.univ,
+                faculty_code=args.faculty,
+            )
+            outdir = Path(args.outdir) if args.outdir else settings.output_dir
+            stem = f"sungshin_{args.year}_{args.semester}"
+            artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
+            print_json({"artifacts": artifacts, "row_count": len(courses)})
             return 0
 
     parser.error(f"Unsupported command: {args.command}")

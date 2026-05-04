@@ -295,6 +295,25 @@ def build_mcp_server(settings: AppSettings | None = None):
             for course in sungshin_service.get_courses(year, semester, campus_code, univ_code, faculty_code)
         ]
 
+    @server.tool(name="sungshin_export_courses")
+    def sungshin_export_courses(
+        year: str,
+        semester: str,
+        outdir: str,
+        campus_code: str | None = None,
+        univ_code: str | None = None,
+        faculty_code: str | None = None,
+    ) -> dict[str, Any]:
+        courses, raw_payloads = sungshin_service.collect_courses(
+            year=year,
+            semester=semester,
+            campus_code=campus_code,
+            univ_code=univ_code,
+            faculty_code=faculty_code,
+        )
+        artifacts = export_courses(courses, Path(outdir), f"sungshin_{year}_{semester}", raw_payloads=raw_payloads)
+        return {"artifacts": artifacts, "row_count": len(courses)}
+
     return server
 
 

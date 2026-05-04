@@ -55,6 +55,7 @@ python -m k_univ_mcp.cli sungshin campuses --year 2025 --semester 10
 python -m k_univ_mcp.cli sungshin universities --campus COMM060.1 --year 2025 --semester 10
 python -m k_univ_mcp.cli sungshin faculties --campus COMM060.1 --univ COMM075.101 --year 2025 --semester 10
 python -m k_univ_mcp.cli sungshin courses --year 2025 --semester 10 --campus COMM060.1 --univ COMM075.101 --faculty 2170100
+python -m k_univ_mcp.cli sungshin export --year 2025 --semester 10 --campus COMM060.1 --univ COMM075.101 --faculty 2170100 --outdir out
 ```
 
 ## MCP 도구
@@ -83,6 +84,7 @@ python -m k_univ_mcp.cli sungshin courses --year 2025 --semester 10 --campus COM
 - `sungshin_get_universities`
 - `sungshin_get_faculties`
 - `sungshin_get_courses`
+- `sungshin_export_courses`
 
 ## MCP 서버 실행
 
