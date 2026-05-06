@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from k_univ_mcp.exporter import export_courses
+from k_univ_mcp.exporter import export_courses, resolve_provider_outdir
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.hanyang import create_hanyang_service
@@ -72,7 +72,12 @@ def _register_export_tool(server: Any, prefix: str, service: Any) -> None:
             college_code=college_code,
             department_code=department_code,
         )
-        artifacts = export_courses(courses, Path(outdir), f"{prefix}_{year}_{semester}", raw_payloads=raw_payloads)
+        artifacts = export_courses(
+            courses,
+            resolve_provider_outdir(Path(outdir), prefix),
+            f"{prefix}_{year}_{semester}",
+            raw_payloads=raw_payloads,
+        )
         return {"artifacts": artifacts, "row_count": len(courses)}
 
 
@@ -126,7 +131,7 @@ def build_mcp_server(settings: AppSettings | None = None):
             dongguk_service,
             year=year,
             semester=semester,
-            outdir=Path(outdir),
+            outdir=resolve_provider_outdir(Path(outdir), "dongguk"),
             campus_code=campus_code,
             college_code=college_code,
             department_code=department_code,

@@ -41,7 +41,13 @@ def test_build_course():
         "slgSosokNm": "컴퓨터소프트웨어학부",
     }
     row = HanyangCourseRow(raw)
-    course = build_course(row, year="2026", semester="10", org_code="H0002256")
+    course = build_course(
+        row,
+        year="2026",
+        semester="10",
+        campus_code="seoul",
+        campus_name="한양대학교 서울캠퍼스",
+    )
 
     assert course.provider == "hanyang"
     assert course.course_code == "HANYANG01"

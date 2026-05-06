@@ -5,23 +5,52 @@ from typing import Any
 from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.sungshin.client import SungshinClient
 from k_univ_mcp.providers.sungshin.parser import build_course
+from k_univ_mcp.semester import normalize_provider_semester
+
+SUNGSHIN_CAMPUSES: dict[str, tuple[str, str]] = {
+    "sujeong": ("COMM060.1", "성신여자대학교 수정캠퍼스"),
+    "unjeong": ("COMM060.2", "성신여자대학교 운정캠퍼스"),
+}
+
+
+def _resolve_sungshin_semester(semester: str) -> str:
+    sem_cd = normalize_provider_semester("sungshin", semester)
+    if "." in sem_cd:
+        return sem_cd
+    return f"COMM063.{sem_cd}"
 
 class SungshinService:
     def __init__(self, client: SungshinClient | None = None):
         self.client = client or SungshinClient()
 
+    @staticmethod
+    def _public_campus_code(campus_code: str) -> str:
+        for public_code, (upstream_code, _) in SUNGSHIN_CAMPUSES.items():
+            if campus_code in {public_code, upstream_code}:
+                return public_code
+        raise ValueError(f"Unsupported Sungshin campus code: {campus_code}")
+
+    @classmethod
+    def _upstream_campus_code(cls, campus_code: str) -> str:
+        return SUNGSHIN_CAMPUSES[cls._public_campus_code(campus_code)][0]
+
+    @classmethod
+    def _campus_name(cls, campus_code: str) -> str:
+        return SUNGSHIN_CAMPUSES[cls._public_campus_code(campus_code)][1]
+
     def get_campuses(self, year: str, semester: str):
         from k_univ_mcp.models import Campus
         return [
-            Campus(code="COMM060.1", name="수정"),
-            Campus(code="COMM060.2", name="운정"),
+            Campus(code=public_code, name=name, raw={"cmpCd": upstream_code})
+            for public_code, (upstream_code, name) in SUNGSHIN_CAMPUSES.items()
         ]
 
     def get_colleges(self, campus_code: str, year: str, semester: str):
         from k_univ_mcp.models import College
+        public_campus_code = self._public_campus_code(campus_code)
         return [
             College(
-                campus_code=campus_code,
+                campus_code=public_campus_code,
                 code="COMM075.101",
                 name="학사과정",
             )
@@ -35,6 +64,7 @@ class SungshinService:
         semester: str,
     ):
         from k_univ_mcp.models import Department
+        public_campus_code = self._public_campus_code(campus_code)
 
         data = self.client.onload()
         dept_list = data.get("deptList", [])
@@ -48,7 +78,7 @@ class SungshinService:
 
                 results.append(
                     Department(
-                        campus_code=campus_code,
+                        campus_code=public_campus_code,
                         college_code=college_code,
                         code=dept.get("cmnCd", ""),
                         name=name,
@@ -64,25 +94,25 @@ class SungshinService:
         college_code: str,
         department_code: str,
     ) -> list[Course]:
-        if semester == "1":
-            sem_cd = "COMM063.10"
-        elif semester == "2":
-            sem_cd = "COMM063.20"
-        elif "." not in semester:
-            sem_cd = f"COMM063.{semester}"
-        else:
-            sem_cd = semester
+        sem_cd = _resolve_sungshin_semester(semester)
+        public_campus_code = self._public_campus_code(campus_code)
 
         rows = self.client.fetch_courses(
             year=year,
             semester=sem_cd,
-            cmp_code=campus_code,
+            cmp_code=self._upstream_campus_code(campus_code),
             org_clsf_code=college_code,
             dpt_mjr_code=department_code,
         )
 
         return [
-            build_course(row, year=year, semester=sem_cd)
+            build_course(
+                row,
+                year=year,
+                semester=sem_cd,
+                campus_code=public_campus_code,
+                campus_name=self._campus_name(public_campus_code),
+            )
             for row in rows
         ]
 
@@ -98,16 +128,10 @@ class SungshinService:
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 
-        if semester == "1":
-            sem_cd = "COMM063.10"
-        elif semester == "2":
-            sem_cd = "COMM063.20"
-        elif "." not in semester:
-            sem_cd = f"COMM063.{semester}"
-        else:
-            sem_cd = semester
+        sem_cd = _resolve_sungshin_semester(semester)
+        resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
 
-        campuses = [c for c in self.get_campuses(year, semester) if campus_code in {None, c.code}]
+        campuses = [c for c in self.get_campuses(year, semester) if resolved_public_campus_code in {None, c.code}]
         for campus in campuses:
             colleges = [u for u in self.get_colleges(campus.code, year, semester) if college_code in {None, u.code}]
             for college in colleges:
@@ -116,7 +140,7 @@ class SungshinService:
                     rows = self.client.fetch_courses(
                         year=year,
                         semester=sem_cd,
-                        cmp_code=campus.code,
+                        cmp_code=self._upstream_campus_code(campus.code),
                         org_clsf_code=college.code,
                         dpt_mjr_code=department.code,
                     )
@@ -132,7 +156,15 @@ class SungshinService:
                         )
                     )
                     for row in rows:
-                        courses.append(build_course(row, year=year, semester=sem_cd))
+                        courses.append(
+                            build_course(
+                                row,
+                                year=year,
+                                semester=sem_cd,
+                                campus_code=campus.code,
+                                campus_name=campus.name,
+                            )
+                        )
 
         return courses, raw_payloads
 

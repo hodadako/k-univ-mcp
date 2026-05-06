@@ -1,8 +1,9 @@
 ## Data Conventions
 
-- 기본 export 경로는 `K_UNIV_MCP_OUTPUT_DIR`이며, 설정이 없으면 out을 사용한다.
-- MCP를 통해 export를 실행하는 경우에도 출력물 기본 위치는 `out/`로 본다.
-- 사용자가 자연어로 별도 경로를 지정하지 않았다면 MCP 경로에서도 `out/` 아래에 결과를 생성한다.
+- 기본 export 루트 경로는 `K_UNIV_MCP_OUTPUT_DIR`이며, 설정이 없으면 `out/`을 사용한다.
+- export 실행 시 실제 출력물은 기본적으로 `out/<영문 학교 디렉토리명>/` 아래에 생성한다.
+- MCP를 통해 export를 실행하는 경우에도 출력물 기본 위치는 `out/<영문 학교 디렉토리명>/`로 본다.
+- 사용자가 별도 경로를 지정한 경우에도 기본 동작은 `<지정 경로>/<영문 학교 디렉토리명>/` 아래에 결과를 생성하는 것이다.
 - export 명령은 기본적으로 csv, xlsx, json, jsonl을 생성한다.
 - raw payload가 존재하면 raw/ 디렉터리를 함께 생성할 수 있다.
 
@@ -18,7 +19,8 @@
 
 ### Campus
 
-- `Campus.code`는 provider 내부에서 campus를 안정적으로 식별하는 값이다.
+- `Campus.code`는 사용자 입력, CLI/MCP 응답, export 결과에서 공통으로 쓰는 안정적인 public campus 식별자다.
+- 학교 원문 요청에 필요한 upstream campus 코드가 따로 있으면 `Campus.code`에 그대로 노출하지 말고 provider 내부 매핑 또는 `raw`에 보존한다.
 - `Campus.name`은 사용자에게 보여줄 대표 한글 이름이다.
 - `Campus.english_name`은 학교 응답에 신뢰 가능한 영문 이름이 있을 때만 채운다.
 - `Campus.raw`에는 campus를 구성한 원문 payload를 넣는다.

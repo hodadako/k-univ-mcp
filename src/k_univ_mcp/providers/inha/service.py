@@ -7,6 +7,7 @@ from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, Colleg
 from k_univ_mcp.providers.inha.client import InhaClient
 from k_univ_mcp.providers.inha.models import InhaCourseRow
 from k_univ_mcp.providers.inha.parser import build_course
+from k_univ_mcp.semester import normalize_provider_semester
 
 INHA_CAMPUS_CODE = "yonghyeon"
 INHA_CAMPUS_NAME = "인하대학교 용현캠퍼스"
@@ -16,11 +17,16 @@ INHA_CAMPUS_NAME = "인하대학교 용현캠퍼스"
 class InhaService:
     client: InhaClient
 
+    @staticmethod
+    def _normalize_semester(semester: str) -> str:
+        return normalize_provider_semester("inha", semester)
+
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
-        _ = (year, semester)
+        _ = (year, self._normalize_semester(semester))
         return [Campus(code=INHA_CAMPUS_CODE, name=INHA_CAMPUS_NAME)]
 
     def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
+        _ = self._normalize_semester(semester)
         if campus_code != INHA_CAMPUS_CODE:
             return []
 
@@ -36,6 +42,7 @@ class InhaService:
         ]
 
     def get_departments(self, campus_code: str, college_code: str, *, year: str, semester: str) -> list[Department]:
+        _ = self._normalize_semester(semester)
         if campus_code != INHA_CAMPUS_CODE:
             return []
 
@@ -55,10 +62,11 @@ class InhaService:
         ]
 
     def get_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str) -> list[Course]:
-        rows = self.client.fetch_courses(department_code, year=year, semester=semester)
+        resolved_semester = self._normalize_semester(semester)
+        rows = self.client.fetch_courses(department_code, year=year, semester=resolved_semester)
 
         # Try to find department name
-        departments = self.get_departments(campus_code, college_code, year=year, semester=semester)
+        departments = self.get_departments(campus_code, college_code, year=year, semester=resolved_semester)
         department_name = next((f.name for f in departments if f.code == department_code), department_code)
 
         courses: list[Course] = []
@@ -78,7 +86,7 @@ class InhaService:
             courses.append(build_course(
                 row_obj,
                 year=year,
-                semester=semester,
+                semester=resolved_semester,
                 campus_code=campus_code,
                 campus_name=INHA_CAMPUS_NAME,
                 college_code=college_code,

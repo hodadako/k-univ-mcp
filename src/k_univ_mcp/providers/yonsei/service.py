@@ -12,11 +12,25 @@ from k_univ_mcp.providers.yonsei.bootstrap import EnvCookieBootstrap
 from k_univ_mcp.providers.yonsei.client import YonseiClient, YonseiError
 from k_univ_mcp.providers.yonsei.models import YonseiCourseRow, YonseiDepartmentRow
 from k_univ_mcp.providers.yonsei.parser import build_course
+from k_univ_mcp.semester import normalize_provider_semester
 from k_univ_mcp.settings import AppSettings
 
 YONSEI_READY_SELECTOR = '[data-ndid="93"][role="button"]'
 YONSEI_CLICK_SELECTOR = '[data-ndid="93"][role="button"]'
 YONSEI_REQUIRED_BROWSER_COOKIES = ("JSESSIONID",)
+
+YONSEI_CAMPUSES: dict[str, tuple[str, str]] = {
+    "sinchon-undergraduate": ("s1", "연세대학교 신촌캠퍼스 학부"),
+    "mirae-undergraduate": ("s2", "연세대학교 미래캠퍼스 학부"),
+    "sinchon-graduate": ("s3", "연세대학교 신촌캠퍼스 대학원"),
+    "mirae-graduate": ("s4", "연세대학교 미래캠퍼스 대학원"),
+    "sinchon-medical": ("s7", "연세대학교 신촌캠퍼스 의료원"),
+    "mirae-medical": ("s8", "연세대학교 미래캠퍼스 의료원"),
+}
+
+YONSEI_UPSTREAM_TO_PUBLIC_CAMPUS: dict[str, str] = {
+    upstream_code: public_code for public_code, (upstream_code, _) in YONSEI_CAMPUSES.items()
+}
 
 
 @dataclass(slots=True)
@@ -60,11 +74,39 @@ class YonseiService:
     def _require_term(year: str, semester: str) -> tuple[str, str]:
         if not year or not semester:
             raise ValueError("Year and semester are required and must be passed explicitly.")
-        return year, semester
+        return year, normalize_provider_semester("yonsei", semester)
 
     @staticmethod
-    def _to_campuses(rows: list[YonseiDepartmentRow]) -> list[Campus]:
-        return [Campus(code=row.code, name=row.name, english_name=row.english_name, raw=row.raw) for row in rows]
+    def _public_campus_code(campus_code: str) -> str:
+        return YONSEI_UPSTREAM_TO_PUBLIC_CAMPUS.get(campus_code, campus_code)
+
+    @classmethod
+    def _resolve_upstream_campus_code(cls, campus_code: str) -> str:
+        if campus_code in YONSEI_CAMPUSES:
+            return YONSEI_CAMPUSES[campus_code][0]
+        if campus_code in YONSEI_UPSTREAM_TO_PUBLIC_CAMPUS:
+            return campus_code
+        raise ValueError(f"Unsupported Yonsei campus code: {campus_code}")
+
+    @classmethod
+    def _campus_name(cls, campus_code: str, fallback: str | None = None) -> str:
+        public_code = cls._public_campus_code(campus_code)
+        campus_info = YONSEI_CAMPUSES.get(public_code)
+        if campus_info is not None:
+            return campus_info[1]
+        return fallback or public_code
+
+    @classmethod
+    def _to_campuses(cls, rows: list[YonseiDepartmentRow]) -> list[Campus]:
+        return [
+            Campus(
+                code=cls._public_campus_code(row.code),
+                name=cls._campus_name(row.code, row.name),
+                english_name=row.english_name,
+                raw=row.raw,
+            )
+            for row in rows
+        ]
 
     @staticmethod
     def _to_universities(campus_code: str, rows: list[YonseiDepartmentRow]) -> list[College]:
@@ -80,12 +122,12 @@ class YonseiService:
         ]
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
-        self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_term(year, semester)
         if self.client is None:
             return self._to_campuses(self.seed_catalog.campuses())
 
         return self._to_campuses(
-            [YonseiDepartmentRow.from_payload(item) for item in self.client.list_campuses(year, semester)]
+            [YonseiDepartmentRow.from_payload(item) for item in self.client.list_campuses(resolved_year, resolved_semester)]
         )
 
     def get_colleges(
@@ -95,14 +137,17 @@ class YonseiService:
         year: str,
         semester: str,
     ) -> list[College]:
-        self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_term(year, semester)
+        public_campus_code = self._public_campus_code(campus_code)
+        upstream_campus_code = self._resolve_upstream_campus_code(campus_code)
         if self.client is None:
-            return self._to_universities(campus_code, self.seed_catalog.colleges(campus_code))
+            return self._to_universities(public_campus_code, self.seed_catalog.colleges(upstream_campus_code))
 
         return self._to_universities(
-            campus_code,
+            public_campus_code,
             [
-                YonseiDepartmentRow.from_payload(item) for item in self.client.list_universities(year, semester, campus_code)
+                YonseiDepartmentRow.from_payload(item)
+                for item in self.client.list_universities(resolved_year, resolved_semester, upstream_campus_code)
             ],
         )
 
@@ -115,10 +160,17 @@ class YonseiService:
         semester: str,
     ) -> list[Department]:
         resolved_year, resolved_semester = self._require_term(year, semester)
-        departments = self._require_client().list_faculties(resolved_year, resolved_semester, campus_code, college_code)
+        public_campus_code = self._public_campus_code(campus_code)
+        upstream_campus_code = self._resolve_upstream_campus_code(campus_code)
+        departments = self._require_client().list_faculties(
+            resolved_year,
+            resolved_semester,
+            upstream_campus_code,
+            college_code,
+        )
         return [
             Department(
-                campus_code=campus_code,
+                campus_code=public_campus_code,
                 college_code=college_code,
                 code=row.code,
                 name=row.name,
@@ -136,15 +188,21 @@ class YonseiService:
         college_code: str,
         department_code: str,
     ) -> list[Course]:
-        self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_term(year, semester)
+        public_campus_code = self._public_campus_code(campus_code)
+        upstream_campus_code = self._resolve_upstream_campus_code(campus_code)
         campus_name = next(
-            (campus.name for campus in self.get_campuses(year=year, semester=semester) if campus.code == campus_code),
+            (
+                campus.name
+                for campus in self.get_campuses(year=resolved_year, semester=resolved_semester)
+                if campus.code == public_campus_code
+            ),
             None,
         )
         college_name = next(
             (
                 univ.name
-                for univ in self.get_colleges(campus_code, year=year, semester=semester)
+                for univ in self.get_colleges(public_campus_code, year=resolved_year, semester=resolved_semester)
                 if univ.code == college_code
             ),
             None,
@@ -152,7 +210,12 @@ class YonseiService:
         department_name = next(
             (
                 department.name
-                for department in self.get_departments(campus_code, college_code, year=year, semester=semester)
+                for department in self.get_departments(
+                    public_campus_code,
+                    college_code,
+                    year=resolved_year,
+                    semester=resolved_semester,
+                )
                 if department.code == department_code
             ),
             None,
@@ -160,16 +223,22 @@ class YonseiService:
         return [
             build_course(
                 YonseiCourseRow(item),
-                year=year,
-                semester=semester,
-                campus_code=campus_code,
+                year=resolved_year,
+                semester=resolved_semester,
+                campus_code=public_campus_code,
                 campus_name=campus_name,
                 college_code=college_code,
                 college_name=college_name,
                 department_code=department_code,
                 department_name=department_name,
             )
-            for item in self._require_client().list_courses(year, semester, campus_code, college_code, department_code)
+            for item in self._require_client().list_courses(
+                resolved_year,
+                resolved_semester,
+                upstream_campus_code,
+                college_code,
+                department_code,
+            )
         ]
 
     def collect_courses(
@@ -181,29 +250,47 @@ class YonseiService:
         college_code: str | None = None,
         department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
+        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 
-        campuses = [campus for campus in self.get_campuses(year=year, semester=semester) if campus_code in {None, campus.code}]
+        campuses = [
+            campus
+            for campus in self.get_campuses(year=resolved_year, semester=resolved_semester)
+            if resolved_public_campus_code in {None, campus.code}
+        ]
         for campus in campuses:
             colleges = [
                 univ
-                for univ in self.get_colleges(campus.code, year=year, semester=semester)
+                for univ in self.get_colleges(campus.code, year=resolved_year, semester=resolved_semester)
                 if college_code in {None, univ.code}
             ]
             for college in colleges:
                 departments = [
                     department
-                    for department in self.get_departments(campus.code, college.code, year=year, semester=semester)
+                    for department in self.get_departments(
+                        campus.code,
+                        college.code,
+                        year=resolved_year,
+                        semester=resolved_semester,
+                    )
                     if department_code in {None, department.code}
                 ]
                 for department in departments:
-                    payload = self._require_client().list_courses(year, semester, campus.code, college.code, department.code)
+                    upstream_campus_code = self._resolve_upstream_campus_code(campus.code)
+                    payload = self._require_client().list_courses(
+                        resolved_year,
+                        resolved_semester,
+                        upstream_campus_code,
+                        college.code,
+                        department.code,
+                    )
                     raw_payloads.append(
                         RawPayloadDump(
                             provider="yonsei",
-                            year=year,
-                            semester=semester,
+                            year=resolved_year,
+                            semester=resolved_semester,
                             campus_code=campus.code,
                             college_code=college.code,
                             department_code=department.code,
@@ -214,8 +301,8 @@ class YonseiService:
                         courses.append(
                             build_course(
                                 YonseiCourseRow(item),
-                                year=year,
-                                semester=semester,
+                                year=resolved_year,
+                                semester=resolved_semester,
                                 campus_code=campus.code,
                                 campus_name=campus.name,
                                 college_code=college.code,

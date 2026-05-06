@@ -70,7 +70,7 @@ def test_service_requires_explicit_term_for_faculties() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
 
     try:
-        service.get_departments("s1", "s1103", year="", semester="10")
+        service.get_departments("sinchon-undergraduate", "s1103", year="", semester="10")
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
@@ -79,7 +79,7 @@ def test_service_requires_explicit_term_for_faculties() -> None:
 
 def test_service_uses_explicit_term_for_faculties() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
-    departments = service.get_departments("s1", "s1103", year="2026", semester="10")
+    departments = service.get_departments("sinchon-undergraduate", "s1103", year="2026", semester="10")
     assert departments[0].code == "0301"
 
 
@@ -88,14 +88,14 @@ def test_get_campuses_prefers_live_discovery() -> None:
 
     campuses = service.get_campuses(year="2026", semester="10")
 
-    assert [campus.code for campus in campuses] == ["s1"]
-    assert campuses[0].name == "신촌캠퍼스"
+    assert [campus.code for campus in campuses] == ["sinchon-undergraduate"]
+    assert campuses[0].name == "연세대학교 신촌캠퍼스 학부"
 
 
 def test_get_universities_prefers_live_discovery() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
 
-    colleges = service.get_colleges("s1", year="2026", semester="10")
+    colleges = service.get_colleges("sinchon-undergraduate", year="2026", semester="10")
 
     assert [college.code for college in colleges] == ["s1103"]
     assert colleges[0].name == "이과대학"
@@ -107,13 +107,14 @@ def test_get_campuses_falls_back_to_seed_when_live_discovery_fails() -> None:
     campuses = service.get_campuses(year="2026", semester="10")
 
     assert len(campuses) >= 1
-    assert any(campus.code == "s1" for campus in campuses)
+    assert any(campus.code == "sinchon-undergraduate" for campus in campuses)
+    assert any(campus.code == "sinchon-undergraduate" and campus.name == "연세대학교 신촌캠퍼스 학부" for campus in campuses)
 
 
 def test_get_universities_falls_back_to_seed_when_live_discovery_fails() -> None:
     service = YonseiService(None, YonseiSeedCatalog())
 
-    colleges = service.get_colleges("s1", year="2026", semester="10")
+    colleges = service.get_colleges("sinchon-undergraduate", year="2026", semester="10")
 
     assert len(colleges) >= 1
     assert any(college.code == "s1103" for college in colleges)
@@ -134,7 +135,7 @@ def test_get_universities_requires_explicit_term_even_for_seed_fallback() -> Non
     service = YonseiService(None, YonseiSeedCatalog())
 
     try:
-        service.get_colleges("s1", year="2026", semester="")
+        service.get_colleges("sinchon-undergraduate", year="2026", semester="")
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
@@ -165,9 +166,15 @@ def test_get_universities_surfaces_live_discovery_failure_when_client_exists() -
 
 def test_collect_courses_builds_domain_objects() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
-    courses, raw_payloads = service.collect_courses(year="2026", semester="10", campus_code="s1", college_code="s1103")
+    courses, raw_payloads = service.collect_courses(
+        year="2026",
+        semester="10",
+        campus_code="sinchon-undergraduate",
+        college_code="s1103",
+    )
     assert len(courses) == 1
     assert courses[0].title == "미적분학"
+    assert courses[0].campus_name == "연세대학교 신촌캠퍼스 학부"
     assert len(raw_payloads) == 1
 
 
@@ -179,6 +186,38 @@ def test_collect_courses_uses_live_discovery_by_default() -> None:
 
     assert len(courses) == 1
     assert len(raw_payloads) == 1
+    assert client.calls == [
+        ("campuses", "2026", "10"),
+        ("colleges", "2026", "10", "s1"),
+        ("departments", "2026", "10", "s1", "s1103"),
+        ("courses", "2026", "10", "s1", "s1103", "0301"),
+    ]
+
+
+def test_service_normalizes_unified_semester_before_client_calls() -> None:
+    client = RecordingClient()
+    service = YonseiService(client, YonseiSeedCatalog())
+
+    service.get_courses("2026", "1", "sinchon-undergraduate", "s1103", "0301")
+
+    assert client.calls == [
+        ("campuses", "2026", "10"),
+        ("colleges", "2026", "10", "s1"),
+        ("departments", "2026", "10", "s1", "s1103"),
+        ("courses", "2026", "10", "s1", "s1103", "0301"),
+    ]
+
+
+def test_collect_courses_normalizes_unified_semester_before_export_fetch() -> None:
+    client = RecordingClient()
+    service = YonseiService(client, YonseiSeedCatalog())
+
+    courses, raw_payloads = service.collect_courses(year="2026", semester="1")
+
+    assert len(courses) == 1
+    assert len(raw_payloads) == 1
+    assert raw_payloads[0].semester == "10"
+    assert courses[0].semester == "10"
     assert client.calls == [
         ("campuses", "2026", "10"),
         ("colleges", "2026", "10", "s1"),

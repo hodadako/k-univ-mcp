@@ -11,6 +11,21 @@ from openpyxl import Workbook
 from k_univ_mcp.models import Course, MeetingSlot, RawPayloadDump
 
 
+PROVIDER_OUTPUT_DIR_NAMES: dict[str, str] = {
+    "yonsei": "yonsei",
+    "dongguk": "dongguk",
+    "gachon": "gachon",
+    "inha": "inha",
+    "sungshin": "sungshin",
+    "soongsil": "soongsil",
+    "hanyang": "hanyang",
+}
+
+
+def resolve_provider_outdir(base_outdir: Path, provider: str) -> Path:
+    return base_outdir / PROVIDER_OUTPUT_DIR_NAMES.get(provider, provider)
+
+
 def _course_from_dict(payload: dict[str, Any]) -> Course:
     meeting_slots = [MeetingSlot(**slot) for slot in payload.get("meeting_slots") or []]
     return Course(

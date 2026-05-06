@@ -116,9 +116,9 @@ def build_settings(**overrides: object) -> AppSettings:
 
 
 def test_catalog_builds_campus_university_and_faculty_rows() -> None:
-    catalog = DonggukCatalog.from_payload(FakeClient().load_course_page())
+    catalog = DonggukCatalog.from_payload(FakeClient().load_course_page(), {"CM030.10": "seoul", "CM030.21": "wise"})
 
-    assert [campus.code for campus in catalog.campuses] == ["CM030.10"]
+    assert [campus.code for campus in catalog.campuses] == ["seoul"]
     assert catalog.campuses[0].name == "서울"
     assert [college.code for college in catalog.colleges] == ["DS0304"]
     assert [department.code for department in catalog.departments] == ["DS030412"]
@@ -126,31 +126,31 @@ def test_catalog_builds_campus_university_and_faculty_rows() -> None:
 
 def test_service_caches_load_payload_and_collects_courses() -> None:
     clients = {
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     }
     service = DonggukService(clients)
 
     campuses = service.get_campuses(year="2026", semester="CM160.10")
-    colleges = service.get_colleges("CM030.10", year="2026", semester="CM160.10")
-    departments = service.get_departments("CM030.10", "DS0304", year="2026", semester="CM160.10")
+    colleges = service.get_colleges("seoul", year="2026", semester="CM160.10")
+    departments = service.get_departments("seoul", "DS0304", year="2026", semester="CM160.10")
     courses, raw_payloads = service.collect_courses(year="2026", semester="CM160.10")
 
-    assert campuses[0].code == "CM030.10"
+    assert campuses[0].code == "seoul"
     assert colleges[0].code == "DS0304"
     assert departments[0].code == "DS030412"
     assert len(courses) == 2
     assert len(raw_payloads) == 2
-    assert clients["CM030.10"].load_calls == 1
-    assert clients["CM030.21"].load_calls == 1
-    assert clients["CM030.10"].course_calls == [("2026", "CM160.10", "CM030.10", "DS0304", "DS030412")]
-    assert clients["CM030.21"].course_calls == [("2026", "CM160.10", "CM030.21", "DK0101", "DK010101")]
+    assert clients["seoul"].load_calls == 1
+    assert clients["wise"].load_calls == 1
+    assert clients["seoul"].course_calls == [("2026", "CM160.10", "CM030.10", "DS0304", "DS030412")]
+    assert clients["wise"].course_calls == [("2026", "CM160.10", "CM030.21", "DK0101", "DK010101")]
 
 
 def test_service_resolves_numeric_semester_input_before_collecting_courses() -> None:
     clients = {
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     }
     service = DonggukService(clients)
 
@@ -158,16 +158,16 @@ def test_service_resolves_numeric_semester_input_before_collecting_courses() -> 
 
     assert len(courses) == 2
     assert len(raw_payloads) == 2
-    assert clients["CM030.10"].course_calls == [("2026", "CM160.10", "CM030.10", "DS0304", "DS030412")]
-    assert clients["CM030.21"].course_calls == [("2026", "CM160.10", "CM030.21", "DK0101", "DK010101")]
+    assert clients["seoul"].course_calls == [("2026", "CM160.10", "CM030.10", "DS0304", "DS030412")]
+    assert clients["wise"].course_calls == [("2026", "CM160.10", "CM030.21", "DK0101", "DK010101")]
     assert [payload.semester for payload in raw_payloads] == ["CM160.10", "CM160.10"]
 
 
 def test_service_rejects_unavailable_semester_from_doload() -> None:
-    service = DonggukService({"CM030.10": FakeClient(campus_code="CM030.10")})
+    service = DonggukService({"seoul": FakeClient(campus_code="CM030.10")})
 
     try:
-        service.get_colleges("CM030.10", year="2026", semester="3학기")
+        service.get_colleges("seoul", year="2026", semester="3학기")
     except ValueError as exc:
         message = str(exc)
         assert "Available semesters from doLoad.do" in message
@@ -179,8 +179,8 @@ def test_service_rejects_unavailable_semester_from_doload() -> None:
 
 def test_iter_course_batches_yields_per_faculty_batches() -> None:
     clients = {
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     }
     service = DonggukService(clients)
 
@@ -193,8 +193,8 @@ def test_iter_course_batches_yields_per_faculty_batches() -> None:
 
 def test_iter_course_batches_can_select_a_batch_slice() -> None:
     clients = {
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     }
     service = DonggukService(clients)
 
@@ -209,17 +209,20 @@ def test_get_campuses_returns_static_seoul_and_wise() -> None:
 
     campuses = service.get_campuses(year="2026", semester="CM160.10")
 
-    assert [(campus.code, campus.name) for campus in campuses] == [("CM030.10", "서울"), ("CM030.21", "WISE")]
+    assert [(campus.code, campus.name) for campus in campuses] == [
+        ("seoul", "동국대학교 서울캠퍼스"),
+        ("wise", "동국대학교 WISE캠퍼스"),
+    ]
 
 
 def test_service_filters_wise_catalog_by_selected_campus() -> None:
     service = DonggukService({
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     })
 
-    colleges = service.get_colleges("CM030.21", year="2026", semester="CM160.10")
-    departments = service.get_departments("CM030.21", "DK0101", year="2026", semester="CM160.10")
+    colleges = service.get_colleges("wise", year="2026", semester="CM160.10")
+    departments = service.get_departments("wise", "DK0101", year="2026", semester="CM160.10")
 
     assert [college.code for college in colleges] == ["DK0101"]
     assert [department.code for department in departments] == ["DK010101"]
@@ -246,10 +249,10 @@ def test_create_service_can_attach_browser_bootstrap(monkeypatch) -> None:
 
     service = create_dongguk_service(build_settings())
 
-    assert set(service.clients) == {"CM030.10", "CM030.21"}
-    assert service.clients["CM030.10"].refresh_session_state is not None
-    assert service.clients["CM030.21"].refresh_session_state is not None
-    assert service.clients["CM030.10"].cookie_header is None
+    assert set(service.clients) == {"seoul", "wise"}
+    assert service.clients["seoul"].refresh_session_state is not None
+    assert service.clients["wise"].refresh_session_state is not None
+    assert service.clients["seoul"].cookie_header is None
     assert bootstrap_calls == []
 
 
@@ -263,9 +266,9 @@ def test_create_service_can_disable_browser_bootstrap(monkeypatch) -> None:
 
     service = create_dongguk_service(build_settings(dongguk_enable_browser_bootstrap=False))
 
-    assert set(service.clients) == {"CM030.10", "CM030.21"}
-    assert service.clients["CM030.10"].refresh_session_state is None
-    assert service.clients["CM030.21"].refresh_session_state is None
+    assert set(service.clients) == {"seoul", "wise"}
+    assert service.clients["seoul"].refresh_session_state is None
+    assert service.clients["wise"].refresh_session_state is None
 
 
 def test_create_service_can_use_campus_specific_cookies() -> None:
@@ -278,13 +281,13 @@ def test_create_service_can_use_campus_specific_cookies() -> None:
         )
     )
 
-    assert service.clients["CM030.10"].cookie_header == "JSESSIONID=seoul"
-    assert service.clients["CM030.21"].cookie_header == "JSESSIONID=wise"
+    assert service.clients["seoul"].cookie_header == "JSESSIONID=seoul"
+    assert service.clients["wise"].cookie_header == "JSESSIONID=wise"
 
 
 def test_wise_adapter_uses_distinct_entry_path() -> None:
-    assert DONGGUK_CAMPUS_ADAPTERS["CM030.10"].index_path != DONGGUK_CAMPUS_ADAPTERS["CM030.21"].index_path
-    assert "654867724D6E564B57577777554374315558647861564273646A524251543039" in DONGGUK_CAMPUS_ADAPTERS["CM030.21"].index_path
+    assert DONGGUK_CAMPUS_ADAPTERS["seoul"].index_path != DONGGUK_CAMPUS_ADAPTERS["wise"].index_path
+    assert "654867724D6E564B57577777554374315558647861564273646A524251543039" in DONGGUK_CAMPUS_ADAPTERS["wise"].index_path
 
 
 def test_require_dongguk_export_batch_size_accepts_positive_values() -> None:
@@ -303,8 +306,8 @@ def test_require_dongguk_export_batch_size_rejects_missing_or_non_positive_value
 
 def test_export_dongguk_courses_runs_all_batches_and_merges(monkeypatch) -> None:
     clients = {
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     }
     service = DonggukService(clients)
     exported_batches: list[tuple[str, list[str]]] = []
@@ -341,8 +344,8 @@ def test_export_dongguk_courses_runs_all_batches_and_merges(monkeypatch) -> None
 
 def test_export_dongguk_courses_keeps_single_batch_mode_when_batch_index_is_set(monkeypatch) -> None:
     service = DonggukService({
-        "CM030.10": FakeClient(campus_code="CM030.10"),
-        "CM030.21": FakeClient(campus_code="CM030.21"),
+        "seoul": FakeClient(campus_code="CM030.10"),
+        "wise": FakeClient(campus_code="CM030.21"),
     })
     merge_calls: list[str] = []
 

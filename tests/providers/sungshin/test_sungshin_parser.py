@@ -19,7 +19,13 @@ def test_build_course():
         "opDptmjrNm": "Dept of Test"
     }
 
-    course = build_course(row, year="2025", semester="COMM063.10")
+    course = build_course(
+        row,
+        year="2025",
+        semester="COMM063.10",
+        campus_code="sujeong",
+        campus_name="성신여자대학교 수정캠퍼스",
+    )
 
     assert course.title == "Test Course"
     assert course.course_code == "AA0001"

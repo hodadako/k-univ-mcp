@@ -7,7 +7,13 @@ from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, Colleg
 from k_univ_mcp.providers.hanyang.client import HanyangClient
 from k_univ_mcp.providers.hanyang.models import HanyangCourseRow
 from k_univ_mcp.providers.hanyang.parser import build_course
+from k_univ_mcp.semester import normalize_provider_semester
 from k_univ_mcp.settings import AppSettings
+
+HANYANG_CAMPUSES: dict[str, tuple[str, str]] = {
+    "seoul": ("H0002256", "한양대학교 서울캠퍼스"),
+    "erica": ("H0002263", "한양대학교 ERICA캠퍼스"),
+}
 
 
 @dataclass(slots=True)
@@ -17,11 +23,30 @@ class HanyangService:
     menu_id: str = "M006631"
     tk: str = ""
 
+    @staticmethod
+    def _normalize_semester(semester: str) -> str:
+        return normalize_provider_semester("hanyang", semester)
+
+    @staticmethod
+    def _public_campus_code(campus_code: str) -> str:
+        for public_code, (upstream_code, _) in HANYANG_CAMPUSES.items():
+            if campus_code in {public_code, upstream_code}:
+                return public_code
+        raise ValueError(f"Unsupported Hanyang campus code: {campus_code}")
+
+    @classmethod
+    def _upstream_campus_code(cls, campus_code: str) -> str:
+        return HANYANG_CAMPUSES[cls._public_campus_code(campus_code)][0]
+
+    @classmethod
+    def _campus_name(cls, campus_code: str) -> str:
+        return HANYANG_CAMPUSES[cls._public_campus_code(campus_code)][1]
+
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
-        # For Hanyang, we'll use seeded campuses for now as discovery is complex
+        _ = self._normalize_semester(semester)
         return [
-            Campus(code="H0002256", name="대학(학부/서울)", raw={"code": "H0002256"}),
-            Campus(code="H0002263", name="대학(학부/ERICA)", raw={"code": "H0002263"}),
+            Campus(code=public_code, name=name, raw={"code": upstream_code})
+            for public_code, (upstream_code, name) in HANYANG_CAMPUSES.items()
         ]
 
     def get_colleges(
@@ -31,12 +56,15 @@ class HanyangService:
         year: str,
         semester: str,
     ) -> list[College]:
+        resolved_semester = self._normalize_semester(semester)
+        public_campus_code = self._public_campus_code(campus_code)
+        upstream_campus_code = self._upstream_campus_code(campus_code)
         # Attempt to list programs (colleges/departments)
         try:
             payload = self.client.list_programs(
                 year=year,
-                semester=semester,
-                org_code=campus_code,
+                semester=resolved_semester,
+                org_code=upstream_campus_code,
                 pgm_id=self.pgm_id,
                 menu_id=self.menu_id,
                 tk=self.tk,
@@ -50,21 +78,21 @@ class HanyangService:
                     break
 
             if not data_list:
-                return [College(campus_code=campus_code, code=campus_code, name="전체", raw={})]
+                return [College(campus_code=public_campus_code, code=public_campus_code, name="전체", raw={})]
 
             # Map pgmNm/pgmCd to College
             # Note: Hanyang's hierarchy is a bit flat in findPgmList
             return [
                 College(
-                    campus_code=campus_code,
-                    code=item.get("pgmCd") or campus_code,
+                    campus_code=public_campus_code,
+                    code=item.get("pgmCd") or public_campus_code,
                     name=item.get("pgmNm") or "전체",
                     raw=item,
                 )
                 for item in data_list
             ]
         except Exception:
-            return [College(campus_code=campus_code, code=campus_code, name="전체", raw={})]
+            return [College(campus_code=public_campus_code, code=public_campus_code, name="전체", raw={})]
 
     def get_departments(
         self,
@@ -74,10 +102,11 @@ class HanyangService:
         year: str,
         semester: str,
     ) -> list[Department]:
+        public_campus_code = self._public_campus_code(campus_code)
         # Hanyang's hierarchy is relatively flat in the search UI
         return [
             Department(
-                campus_code=campus_code,
+                campus_code=public_campus_code,
                 college_code=college_code,
                 code=college_code,
                 name="전체",
@@ -93,11 +122,12 @@ class HanyangService:
         college_code: str,
         department_code: str,
     ) -> list[Course]:
-        # In Hanyang, we mostly use campus_code (org_code)
+        resolved_semester = self._normalize_semester(semester)
+        public_campus_code = self._public_campus_code(campus_code)
         payload = self.client.find_courses(
             year=year,
-            semester=semester,
-            org_code=campus_code,
+            semester=resolved_semester,
+            org_code=self._upstream_campus_code(campus_code),
             pgm_id=self.pgm_id,
             menu_id=self.menu_id,
             tk=self.tk,
@@ -114,16 +144,17 @@ class HanyangService:
             build_course(
                 HanyangCourseRow(item),
                 year=year,
-                semester=semester,
-                org_code=campus_code,
+                semester=resolved_semester,
+                campus_code=public_campus_code,
+                campus_name=self._campus_name(public_campus_code),
             )
             for item in rows
         ]
 
-        if college_code and college_code != campus_code:
+        if college_code and college_code != public_campus_code:
             courses = [c for c in courses if c.college_code == college_code]
 
-        if department_code and department_code != campus_code:
+        if department_code and department_code != public_campus_code:
             courses = [c for c in courses if c.department_code == department_code]
 
         return courses
@@ -137,15 +168,21 @@ class HanyangService:
         college_code: str | None = None,
         department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
+        resolved_semester = self._normalize_semester(semester)
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 
-        campuses = [c for c in self.get_campuses(year=year, semester=semester) if campus_code in {None, c.code}]
+        resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
+        campuses = [
+            c
+            for c in self.get_campuses(year=year, semester=resolved_semester)
+            if resolved_public_campus_code in {None, c.code}
+        ]
         for campus in campuses:
             payload = self.client.find_courses(
                 year=year,
-                semester=semester,
-                org_code=campus.code,
+                semester=resolved_semester,
+                org_code=self._upstream_campus_code(campus.code),
                 pgm_id=self.pgm_id,
                 menu_id=self.menu_id,
                 tk=self.tk,
@@ -161,7 +198,7 @@ class HanyangService:
                 RawPayloadDump(
                     provider="hanyang",
                     year=year,
-                    semester=semester,
+                    semester=resolved_semester,
                     campus_code=campus.code,
                     college_code=campus.code,
                     department_code=campus.code,
@@ -173,9 +210,9 @@ class HanyangService:
                 course = build_course(
                     HanyangCourseRow(item),
                     year=year,
-                    semester=semester,
-                    org_code=campus.code,
-                    org_name=campus.name,
+                    semester=resolved_semester,
+                    campus_code=campus.code,
+                    campus_name=campus.name,
                 )
 
                 # Apply filters if provided

@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 from typing import Any, Callable
 
-from k_univ_mcp.exporter import export_courses, print_json
+from k_univ_mcp.exporter import export_courses, print_json, resolve_provider_outdir
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.hanyang import create_hanyang_service
@@ -12,6 +12,7 @@ from k_univ_mcp.providers.inha import create_inha_service
 from k_univ_mcp.providers.soongsil import create_soongsil_service
 from k_univ_mcp.providers.sungshin import create_sungshin_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
+from k_univ_mcp.semester import semester_help_text
 from k_univ_mcp.settings import AppSettings
 
 
@@ -28,12 +29,12 @@ def _add_common_provider_commands(
 
     campuses = commands.add_parser("campuses", help=f"List {provider_label} campuses")
     campuses.add_argument("--year", required=True)
-    campuses.add_argument("--semester", required=True)
+    campuses.add_argument("--semester", required=True, help=semester_help_text())
 
     colleges = commands.add_parser("colleges", aliases=["universities"], help=f"List {provider_label} colleges for a campus")
     colleges.add_argument("--campus", required=True)
     colleges.add_argument("--year", required=True)
-    colleges.add_argument("--semester", required=True)
+    colleges.add_argument("--semester", required=True, help=semester_help_text())
 
     departments = commands.add_parser(
         "departments",
@@ -43,21 +44,21 @@ def _add_common_provider_commands(
     departments.add_argument("--campus", required=True)
     departments.add_argument("--college", "--univ", dest="college", required=True)
     departments.add_argument("--year", required=True)
-    departments.add_argument("--semester", required=True)
+    departments.add_argument("--semester", required=True, help=semester_help_text())
 
     courses = commands.add_parser("courses", help=f"List {provider_label} courses for a department")
     courses.add_argument("--year", required=True)
-    courses.add_argument("--semester", required=True)
+    courses.add_argument("--semester", required=True, help=semester_help_text())
     courses.add_argument("--campus", required=True)
     courses.add_argument("--college", "--univ", dest="college", required=True)
-    courses.add_argument("--department", "--department", dest="department", required=True)
+    courses.add_argument("--department", "--faculty", dest="department", required=True)
 
     export = commands.add_parser("export", help=f"Export {provider_label} courses")
     export.add_argument("--year", required=True)
-    export.add_argument("--semester", required=True)
+    export.add_argument("--semester", required=True, help=semester_help_text())
     export.add_argument("--campus")
     export.add_argument("--college", "--univ", dest="college")
-    export.add_argument("--department", "--department", dest="department")
+    export.add_argument("--department", "--faculty", dest="department")
     export.add_argument("--outdir", default=None)
     if include_batch_args:
         export.add_argument("--batch-index", type=int, default=None)
@@ -132,7 +133,8 @@ def _export_with_default_stem(
         college_code=args.college,
         department_code=args.department,
     )
-    outdir = Path(args.outdir) if args.outdir else settings.output_dir
+    base_outdir = Path(args.outdir) if args.outdir else settings.output_dir
+    outdir = resolve_provider_outdir(base_outdir, args.provider)
     stem = f"{args.provider}_{args.year}_{args.semester}"
     artifacts = export_courses(courses, outdir, stem, raw_payloads=raw_payloads)
     print_json({"artifacts": artifacts, "row_count": len(courses)})
@@ -163,7 +165,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"Unsupported command: {args.command}")
 
     if args.provider == "dongguk":
-        outdir = Path(args.outdir) if args.outdir else settings.output_dir
+        base_outdir = Path(args.outdir) if args.outdir else settings.output_dir
+        outdir = resolve_provider_outdir(base_outdir, args.provider)
         result = export_dongguk_courses(
             service,
             year=args.year,

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import cast
 
 import k_univ_mcp.exporter as exporter_module
-from k_univ_mcp.exporter import export_course_batches, export_courses, merge_exported_batches
+from k_univ_mcp.exporter import export_course_batches, export_courses, merge_exported_batches, resolve_provider_outdir
 from k_univ_mcp.models import Course, MeetingSlot, RawPayloadDump
 
 
@@ -170,8 +170,8 @@ def test_export_courses_writes_all_formats_without_filesystem(monkeypatch) -> No
         semester="10",
         course_code="MATH1001",
         title="미적분학",
-        campus_code="s1",
-        campus_name="학부(신촌)",
+        campus_code="sinchon-undergraduate",
+        campus_name="연세대학교 신촌캠퍼스 학부",
         college_code="s1103",
         college_name="이과대학",
         department_code="0301",
@@ -182,7 +182,7 @@ def test_export_courses_writes_all_formats_without_filesystem(monkeypatch) -> No
         provider="yonsei",
         year="2026",
         semester="10",
-        campus_code="s1",
+        campus_code="sinchon-undergraduate",
         college_code="s1103",
         department_code="0301",
         payload=[{"subjtnb": "MATH1001"}],
@@ -201,7 +201,13 @@ def test_export_courses_writes_all_formats_without_filesystem(monkeypatch) -> No
     assert FakeDataFrame.last_records is not None
     assert FakeDataFrame.last_records[0]["title"] == "미적분학"
     assert "미적분학" in root.files["test_out/yonsei_2026_10.jsonl"]
-    assert json.loads(root.files["test_out/raw/yonsei_2026_10_s1_s1103_0301.json"])[0]["subjtnb"] == "MATH1001"
+    assert json.loads(root.files["test_out/raw/yonsei_2026_10_sinchon-undergraduate_s1103_0301.json"])[0]["subjtnb"] == "MATH1001"
+
+
+def test_resolve_provider_outdir_uses_school_name_directory() -> None:
+    outdir = resolve_provider_outdir(Path("out"), "yonsei")
+
+    assert outdir == Path("out") / "yonsei"
 
 
 def test_export_course_batches_streams_multiple_batches_without_filesystem(monkeypatch) -> None:
@@ -211,8 +217,8 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         semester="CM160.10",
         course_code="BUD10126",
         title="불교학맵핑",
-        campus_code="CM030.21",
-        campus_name="WISE",
+        campus_code="wise",
+        campus_name="동국대학교 WISE캠퍼스",
         college_code="DK0201",
         college_name="불교문화대학",
         department_code="DK02010101",
@@ -224,8 +230,8 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         semester="CM160.10",
         course_code="KOR1001",
         title="국어학개론",
-        campus_code="CM030.21",
-        campus_name="WISE",
+        campus_code="wise",
+        campus_name="동국대학교 WISE캠퍼스",
         college_code="DK0202",
         college_name="인문과학대학",
         department_code="DK02020101",
@@ -236,7 +242,7 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         provider="dongguk",
         year="2026",
         semester="CM160.10",
-        campus_code="CM030.21",
+        campus_code="wise",
         college_code="DK0201",
         department_code="DK02010101",
         payload=[{"SBJ_NO": "BUD10126"}],
@@ -245,7 +251,7 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         provider="dongguk",
         year="2026",
         semester="CM160.10",
-        campus_code="CM030.21",
+        campus_code="wise",
         college_code="DK0202",
         department_code="DK02020101",
         payload=[{"SBJ_NO": "KOR1001"}],
@@ -265,8 +271,8 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
     assert set(artifacts) == {"csv", "xlsx", "json", "jsonl", "raw_dir"}
     assert "불교학맵핑" in root.files["test_out/dongguk_2026_CM160.10.json"]
     assert "국어학개론" in root.files["test_out/dongguk_2026_CM160.10.json"]
-    assert json.loads(root.files["test_out/raw/dongguk_2026_CM160.10_CM030.21_DK0201_DK02010101.json"])[0]["SBJ_NO"] == "BUD10126"
-    assert json.loads(root.files["test_out/raw/dongguk_2026_CM160.10_CM030.21_DK0202_DK02020101.json"])[0]["SBJ_NO"] == "KOR1001"
+    assert json.loads(root.files["test_out/raw/dongguk_2026_CM160.10_wise_DK0201_DK02010101.json"])[0]["SBJ_NO"] == "BUD10126"
+    assert json.loads(root.files["test_out/raw/dongguk_2026_CM160.10_wise_DK0202_DK02020101.json"])[0]["SBJ_NO"] == "KOR1001"
     assert FakeWorkbook.saved_paths == ["test_out/dongguk_2026_CM160.10.xlsx"]
     assert FakeWorkbook.last_sheet is not None
     assert FakeWorkbook.last_sheet.rows[0][0] == "provider"
@@ -286,8 +292,8 @@ def test_merge_exported_batches_merges_batch_artifacts_without_filesystem(monkey
         semester="CM160.10",
         course_code="BUD10126",
         title="불교학맵핑",
-        campus_code="CM030.21",
-        campus_name="WISE",
+        campus_code="wise",
+        campus_name="동국대학교 WISE캠퍼스",
         college_code="DK0201",
         college_name="불교문화대학",
         department_code="DK02010101",
@@ -299,8 +305,8 @@ def test_merge_exported_batches_merges_batch_artifacts_without_filesystem(monkey
         semester="CM160.10",
         course_code="KOR1001",
         title="국어학개론",
-        campus_code="CM030.21",
-        campus_name="WISE",
+        campus_code="wise",
+        campus_name="동국대학교 WISE캠퍼스",
         college_code="DK0202",
         college_name="인문과학대학",
         department_code="DK02020101",
@@ -314,10 +320,10 @@ def test_merge_exported_batches_merges_batch_artifacts_without_filesystem(monkey
     raw1 = batch1 / "raw"
     raw0.mkdir(parents=True, exist_ok=True)
     raw1.mkdir(parents=True, exist_ok=True)
-    (raw0 / "dongguk_2026_CM160.10_CM030.21_DK0201_DK02010101.json").write_text(
+    (raw0 / "dongguk_2026_CM160.10_wise_DK0201_DK02010101.json").write_text(
         json.dumps([{"SBJ_NO": "BUD10126"}], ensure_ascii=False)
     )
-    (raw1 / "dongguk_2026_CM160.10_CM030.21_DK0202_DK02020101.json").write_text(
+    (raw1 / "dongguk_2026_CM160.10_wise_DK0202_DK02020101.json").write_text(
         json.dumps([{"SBJ_NO": "KOR1001"}], ensure_ascii=False)
     )
 
@@ -339,4 +345,4 @@ def test_merge_exported_batches_merges_batch_artifacts_without_filesystem(monkey
     assert [record["title"] for record in records] == ["불교학맵핑", "국어학개론"]
     assert "불교학맵핑" in root.files["test_out/dongguk_2026_CM160.10.jsonl"]
     assert "국어학개론" in root.files["test_out/dongguk_2026_CM160.10.jsonl"]
-    assert json.loads(root.files["test_out/raw/dongguk_2026_CM160.10_CM030.21_DK0201_DK02010101.json"])[0]["SBJ_NO"] == "BUD10126"
+    assert json.loads(root.files["test_out/raw/dongguk_2026_CM160.10_wise_DK0201_DK02010101.json"])[0]["SBJ_NO"] == "BUD10126"

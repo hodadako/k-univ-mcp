@@ -6,6 +6,7 @@ from k_univ_mcp.models import Campus, Course, Department, College, RawPayloadDum
 from k_univ_mcp.providers.soongsil.client import SoongsilClient
 from k_univ_mcp.providers.soongsil.models import SoongsilCatalogEntry
 from k_univ_mcp.providers.soongsil.parser import SoongsilParser
+from k_univ_mcp.semester import CANONICAL_SEMESTER_LABELS, canonicalize_semester, normalize_provider_semester
 from k_univ_mcp.settings import AppSettings
 
 
@@ -45,9 +46,10 @@ class SoongsilService:
         year: str,
         semester: str,
     ) -> list[College]:
+        resolved_semester = normalize_provider_semester("soongsil", semester)
         colleges: list[College] = []
         seen: set[str] = set()
-        for entry in self._catalog(year, semester):
+        for entry in self._catalog(year, resolved_semester):
             if entry.college_code in seen:
                 continue
             seen.add(entry.college_code)
@@ -68,6 +70,7 @@ class SoongsilService:
         year: str,
         semester: str,
     ) -> list[Department]:
+        resolved_semester = normalize_provider_semester("soongsil", semester)
         return [
             Department(
                 campus_code=campus_code,
@@ -75,7 +78,7 @@ class SoongsilService:
                 code=entry.department_code,
                 name=entry.department_name,
             )
-            for entry in self._catalog(year, semester)
+            for entry in self._catalog(year, resolved_semester)
             if entry.college_code == college_code
         ]
 
@@ -87,16 +90,17 @@ class SoongsilService:
         college_code: str,
         department_code: str,
     ) -> list[Course]:
+        resolved_semester = normalize_provider_semester("soongsil", semester)
         courses: list[Course] = []
         term_name = self._term_name(year, semester)
 
-        for entry, html in self._collect_course_pages(year, semester, college_code, department_code):
+        for entry, html in self._collect_course_pages(year, resolved_semester, college_code, department_code):
             rows = self.parser.parse_courses(html)
             for row in rows:
                 courses.append(Course(
                     provider="soongsil",
                     year=year,
-                    semester=semester,
+                    semester=resolved_semester,
                     term_name=term_name,
                     campus_code=campus_code,
                     campus_name="숭실대학교",
@@ -138,6 +142,7 @@ class SoongsilService:
         college_code: str | None = None,
         department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
+        resolved_semester = normalize_provider_semester("soongsil", semester)
         campus_code = campus_code or "soongsil"
         selected_univ_code = college_code or "soongsil_all"
         selected_faculty_code = department_code or "soongsil_all"
@@ -146,13 +151,13 @@ class SoongsilService:
         raw_payloads: list[RawPayloadDump] = []
         term_name = self._term_name(year, semester)
 
-        for entry, html in self._collect_course_pages(year, semester, selected_univ_code, selected_faculty_code):
+        for entry, html in self._collect_course_pages(year, resolved_semester, selected_univ_code, selected_faculty_code):
             rows = self.parser.parse_courses(html)
             for row in rows:
                 courses.append(Course(
                     provider="soongsil",
                     year=year,
-                    semester=semester,
+                    semester=resolved_semester,
                     term_name=term_name,
                     campus_code=campus_code,
                     campus_name="숭실대학교",
@@ -188,7 +193,7 @@ class SoongsilService:
                 RawPayloadDump(
                     provider="soongsil",
                     year=year,
-                    semester=semester,
+                    semester=resolved_semester,
                     campus_code=campus_code,
                     college_code=entry.college_code,
                     department_code=entry.department_code,
@@ -209,6 +214,12 @@ class SoongsilService:
         return self._catalog_cache[key]
 
     def _term_name(self, year: str, semester: str) -> str:
+        canonical = canonicalize_semester(semester)
+        label = CANONICAL_SEMESTER_LABELS.get(canonical)
+        if label is not None:
+            return f"{year}학년도 {label}"
+        if semester.endswith("학기"):
+            return f"{year}학년도 {semester}"
         return f"{year}학년도 {semester}학기"
 
     def _collect_course_pages(

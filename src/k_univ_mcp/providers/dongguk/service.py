@@ -13,11 +13,13 @@ from k_univ_mcp.providers.dongguk.bootstrap import DONGGUK_REQUIRED_BROWSER_COOK
 from k_univ_mcp.providers.dongguk.client import DonggukClient
 from k_univ_mcp.providers.dongguk.models import DonggukCourseRow, DonggukDepartmentRow
 from k_univ_mcp.providers.dongguk.parser import build_course, semester_label
+from k_univ_mcp.semester import normalize_provider_semester
 from k_univ_mcp.settings import AppSettings
 
 
 @dataclass(frozen=True, slots=True)
 class DonggukCampusAdapter:
+    public_code: str
     code: str
     name: str
     base_url: str
@@ -32,18 +34,20 @@ class DonggukCampusAdapter:
 
 
 DONGGUK_CAMPUS_ADAPTERS: dict[str, DonggukCampusAdapter] = {
-    "CM030.10": DonggukCampusAdapter(
+    "seoul": DonggukCampusAdapter(
+        public_code="seoul",
         code="CM030.10",
-        name="서울",
+        name="동국대학교 서울캠퍼스",
         base_url="https://support.dongguk.edu",
         index_path="/unis/index.do?t=6544684B636D786A4E6B4A46566E63355A45394D536D78524E44526F647A3039",
         campus_fg="S",
         orgn_clsf_cd="CM015.110",
         conn_orgn_cd="DS03",
     ),
-    "CM030.21": DonggukCampusAdapter(
+    "wise": DonggukCampusAdapter(
+        public_code="wise",
         code="CM030.21",
-        name="WISE",
+        name="동국대학교 WISE캠퍼스",
         base_url="https://support.dongguk.ac.kr",
         index_path="/unis/index.do?t=654867724D6E564B57577777554374315558647861564273646A524251543039",
         campus_fg="K",
@@ -194,7 +198,7 @@ class DonggukCatalog:
     departments: list[Department]
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "DonggukCatalog":
+    def from_payload(cls, payload: dict[str, Any], campus_aliases: dict[str, str]) -> "DonggukCatalog":
         rows = [
             row
             for row in _iter_dicts(payload)
@@ -209,10 +213,16 @@ class DonggukCatalog:
         for row in rows:
             payload_row = DonggukDepartmentRow.from_payload(row)
             campus_code = payload_row.campus_code or payload_row.code
+            public_campus_code = campus_aliases.get(campus_code or "", campus_code)
             if campus_code and campus_code not in campus_map:
                 campus_name = _campus_name_from_full_name(row.get("CAMPUS_NM_FULL") or row.get("DEPT_NM_FULL") or row.get("FULL_NAME"))
                 campus_name = campus_name or _strip_prefix(row.get("CAMPUS_NM")) or payload_row.name or campus_code
-                campus_map[campus_code] = Campus(code=campus_code, name=campus_name, english_name=payload_row.english_name, raw=row)
+                campus_map[campus_code] = Campus(
+                    code=public_campus_code,
+                    name=campus_name,
+                    english_name=payload_row.english_name,
+                    raw=row,
+                )
 
             college_code = payload_row.college_code
             if college_code and college_code not in university_map:
@@ -221,7 +231,7 @@ class DonggukCatalog:
                     take_last=False,
                 ) or _strip_prefix(row.get("COLG_NM") or row.get("DEPT_NM") or payload_row.name)
                 university_map[college_code] = College(
-                    campus_code=campus_code,
+                    campus_code=public_campus_code,
                     code=college_code,
                     name=college_name or payload_row.name,
                     english_name=payload_row.english_name,
@@ -236,7 +246,7 @@ class DonggukCatalog:
                         take_last=True,
                     ) or payload_row.name
                     faculty_map[department_code] = Department(
-                        campus_code=campus_code,
+                        campus_code=public_campus_code,
                         college_code=college_code or "",
                         code=department_code,
                         name=department_name,
@@ -258,15 +268,31 @@ class DonggukService:
     _catalog_cache: dict[tuple[str, str, str], DonggukCatalog] = field(default_factory=dict, repr=False)
     _semester_cache: dict[tuple[str, str, str], str] = field(default_factory=dict, repr=False)
 
+    @staticmethod
+    def _campus_aliases() -> dict[str, str]:
+        aliases: dict[str, str] = {}
+        for public_code, adapter in DONGGUK_CAMPUS_ADAPTERS.items():
+            aliases[public_code] = public_code
+            aliases[adapter.code] = public_code
+        return aliases
+
+    @classmethod
+    def _resolve_public_campus_code(cls, campus_code: str) -> str:
+        resolved = cls._campus_aliases().get(campus_code)
+        if resolved is None:
+            raise ValueError(f"Unsupported Dongguk campus code: {campus_code}")
+        return resolved
+
     def _require_client(self, campus_code: str) -> DonggukClient | Any:
-        client = self.clients.get(campus_code)
+        public_campus_code = self._resolve_public_campus_code(campus_code)
+        client = self.clients.get(public_campus_code)
         if client is None:
             raise ValueError(f"Dongguk live API access requires a configured client for campus {campus_code}.")
         return client
 
-    @staticmethod
-    def _require_adapter(campus_code: str) -> DonggukCampusAdapter:
-        adapter = DONGGUK_CAMPUS_ADAPTERS.get(campus_code)
+    @classmethod
+    def _require_adapter(cls, campus_code: str) -> DonggukCampusAdapter:
+        adapter = DONGGUK_CAMPUS_ADAPTERS.get(cls._resolve_public_campus_code(campus_code))
         if adapter is None:
             raise ValueError(f"Unsupported Dongguk campus code: {campus_code}")
         return adapter
@@ -275,7 +301,7 @@ class DonggukService:
     def _require_term(year: str, semester: str) -> tuple[str, str]:
         if not year or not semester:
             raise ValueError("Year and semester are required and must be passed explicitly.")
-        return year, semester
+        return year, normalize_provider_semester("dongguk", semester)
 
     @staticmethod
     def _normalize_term_text(value: str | None) -> str:
@@ -329,15 +355,16 @@ class DonggukService:
 
     def _resolve_semester(self, campus_code: str, year: str, semester: str) -> str:
         _ = self._require_term(year, semester)
-        _ = self._require_adapter(campus_code)
+        public_campus_code = self._resolve_public_campus_code(campus_code)
+        _ = self._require_adapter(public_campus_code)
 
-        cache_key = (campus_code, year, semester)
+        cache_key = (public_campus_code, year, semester)
         cached = self._semester_cache.get(cache_key)
         if cached is not None:
             return cached
 
         requested = self._normalize_term_text(semester)
-        rows = self._require_client(campus_code).fetch_semesters()
+        rows = self._require_client(public_campus_code).fetch_semesters()
 
         matching_code: str | None = None
         available_codes: list[str] = []
@@ -368,7 +395,7 @@ class DonggukService:
             else:
                 available_hint = "none returned by doLoad.do"
             raise ValueError(
-                f"Dongguk semester '{semester}' is not available for {campus_code} in {year}. "
+                f"Dongguk semester '{semester}' is not available for {public_campus_code} in {year}. "
                 + f"Available semesters from doLoad.do: {available_hint}"
             )
 
@@ -376,15 +403,16 @@ class DonggukService:
         return matching_code
 
     def _catalog(self, campus_code: str, year: str, semester: str) -> DonggukCatalog:
-        resolved_semester = self._resolve_semester(campus_code, year, semester)
-        key = (campus_code, year, resolved_semester)
+        public_campus_code = self._resolve_public_campus_code(campus_code)
+        resolved_semester = self._resolve_semester(public_campus_code, year, semester)
+        key = (public_campus_code, year, resolved_semester)
         catalog = self._catalog_cache.get(key)
         if catalog is not None:
             return catalog
-        payload = self._require_client(campus_code).load_course_page()
+        payload = self._require_client(public_campus_code).load_course_page()
         if not isinstance(payload, dict):
             raise ValueError("Dongguk doLoad.do must return a JSON object.")
-        catalog = DonggukCatalog.from_payload(payload)
+        catalog = DonggukCatalog.from_payload(payload, self._campus_aliases())
         self._catalog_cache[key] = catalog
         return catalog
 
@@ -392,7 +420,10 @@ class DonggukService:
     def _to_campuses(rows: list[Campus]) -> list[Campus]:
         if rows:
             return rows
-        return [Campus(code=adapter.code, name=adapter.name, raw={"CAMPUS_CD": adapter.code}) for adapter in DONGGUK_CAMPUS_ADAPTERS.values()]
+        return [
+            Campus(code=adapter.public_code, name=adapter.name, raw={"CAMPUS_CD": adapter.code})
+            for adapter in DONGGUK_CAMPUS_ADAPTERS.values()
+        ]
 
     @staticmethod
     def _to_universities(campus_code: str, rows: list[College]) -> list[College]:
@@ -409,12 +440,16 @@ class DonggukService:
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
         self._require_term(year, semester)
-        return [Campus(code=adapter.code, name=adapter.name, raw={"CAMPUS_CD": adapter.code}) for adapter in DONGGUK_CAMPUS_ADAPTERS.values()]
+        return [
+            Campus(code=adapter.public_code, name=adapter.name, raw={"CAMPUS_CD": adapter.code})
+            for adapter in DONGGUK_CAMPUS_ADAPTERS.values()
+        ]
 
     def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
         self._require_term(year, semester)
-        self._require_adapter(campus_code)
-        return self._to_universities(campus_code, self._catalog(campus_code, year, semester).colleges)
+        public_campus_code = self._resolve_public_campus_code(campus_code)
+        self._require_adapter(public_campus_code)
+        return self._to_universities(public_campus_code, self._catalog(public_campus_code, year, semester).colleges)
 
     def get_departments(
         self,
@@ -425,8 +460,9 @@ class DonggukService:
         semester: str,
     ) -> list[Department]:
         self._require_term(year, semester)
-        self._require_adapter(campus_code)
-        return self._to_faculties(campus_code, college_code, self._catalog(campus_code, year, semester).departments)
+        public_campus_code = self._resolve_public_campus_code(campus_code)
+        self._require_adapter(public_campus_code)
+        return self._to_faculties(public_campus_code, college_code, self._catalog(public_campus_code, year, semester).departments)
 
     def get_courses(
         self,
@@ -437,21 +473,28 @@ class DonggukService:
         department_code: str,
     ) -> list[Course]:
         self._require_term(year, semester)
-        self._require_adapter(campus_code)
-        resolved_semester = self._resolve_semester(campus_code, year, semester)
-        catalog = self._catalog(campus_code, year, resolved_semester)
-        campus_name = next((campus.name for campus in catalog.campuses if campus.code == campus_code), None)
+        public_campus_code = self._resolve_public_campus_code(campus_code)
+        adapter = self._require_adapter(public_campus_code)
+        resolved_semester = self._resolve_semester(public_campus_code, year, semester)
+        catalog = self._catalog(public_campus_code, year, resolved_semester)
+        campus_name = next((campus.name for campus in catalog.campuses if campus.code == public_campus_code), None)
         if campus_name is None:
-            campus_name = self._require_adapter(campus_code).name
+            campus_name = adapter.name
         college_name = next((college.name for college in catalog.colleges if college.code == college_code), None)
         department_name = next((department.name for department in catalog.departments if department.code == department_code), None)
-        rows = self._require_client(campus_code).list_courses(year, resolved_semester, campus_code, college_code, department_code)
+        rows = self._require_client(public_campus_code).list_courses(
+            year,
+            resolved_semester,
+            adapter.code,
+            college_code,
+            department_code,
+        )
         return [
             build_course(
                 DonggukCourseRow(row),
                 year=year,
                 semester=resolved_semester,
-                campus_code=campus_code,
+                campus_code=public_campus_code,
                 campus_name=campus_name,
                 college_code=college_code,
                 college_name=college_name,
@@ -497,9 +540,9 @@ class DonggukService:
 
         targets: list[tuple[Campus, College, Department]] = []
         campuses = [
-            Campus(code=adapter.code, name=adapter.name, raw={"CAMPUS_CD": adapter.code})
+            Campus(code=adapter.public_code, name=adapter.name, raw={"CAMPUS_CD": adapter.code})
             for adapter in DONGGUK_CAMPUS_ADAPTERS.values()
-            if campus_code in {None, adapter.code, ""}
+            if campus_code in {None, adapter.public_code, adapter.code, ""}
         ]
         for campus in campuses:
             resolved_semester = self._resolve_semester(campus.code, year, semester)
@@ -570,7 +613,14 @@ class DonggukService:
 
         for campus, college, department in targets:
             resolved_semester = self._resolve_semester(campus.code, year, semester)
-            payload = self._require_client(campus.code).list_courses(year, resolved_semester, campus.code, college.code, department.code)
+            adapter = self._require_adapter(campus.code)
+            payload = self._require_client(campus.code).list_courses(
+                year,
+                resolved_semester,
+                adapter.code,
+                college.code,
+                department.code,
+            )
             raw_payload = RawPayloadDump(
                 provider="dongguk",
                 year=year,
@@ -601,7 +651,7 @@ def create_dongguk_service(settings: AppSettings | None = None) -> DonggukServic
     app_settings = settings or AppSettings.from_env()
     clients: dict[str, DonggukClient] = {}
 
-    for adapter in DONGGUK_CAMPUS_ADAPTERS.values():
+    for public_code, adapter in DONGGUK_CAMPUS_ADAPTERS.items():
         cookie_header = app_settings.dongguk_cookie
         if adapter.code == "CM030.21":
             cookie_header = app_settings.dongguk_wise_cookie or cookie_header
@@ -626,7 +676,7 @@ def create_dongguk_service(settings: AppSettings | None = None) -> DonggukServic
             )
             refresh_session_state = browser_bootstrap.resolve_session_state
 
-        clients[adapter.code] = DonggukClient(
+        clients[public_code] = DonggukClient(
             cookie_header=cookie_header,
             base_url=adapter.base_url,
             index_path=adapter.index_path,

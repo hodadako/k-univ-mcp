@@ -10,5 +10,5 @@ Use this file as the default behavior contract when changing code.
 - Current required doc:
   - `docs/git-rules.md`
   - `docs/conventions.md`
-  - `schedule-fine-tuning.md`
+  - `docs/schedule-fine-tuning.md`
 - Update docs when workflow or architecture changes.

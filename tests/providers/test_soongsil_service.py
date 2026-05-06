@@ -103,8 +103,8 @@ def test_soongsil_service_builds_dynamic_universities_faculties_and_courses() ->
     assert {course.course_code for course in courses} == {"2150517201", "MATH1001"}
     assert {course.term_name for course in courses} == {"2026학년도 1학기"}
     assert len(raw_payloads) == 2
-    assert client.list_calls == [("2026", "1")]
-    assert client.collect_calls == [("2026", "1", [("11000001", "1100000101"), ("12000001", "1200000101")])]
+    assert client.list_calls == [("2026", "1학기")]
+    assert client.collect_calls == [("2026", "1학기", [("11000001", "1100000101"), ("12000001", "1200000101")])]
 
 
 def test_soongsil_service_can_filter_by_university_or_faculty_code() -> None:
@@ -118,3 +118,13 @@ def test_soongsil_service_can_filter_by_university_or_faculty_code() -> None:
     assert [course.course_code for course in by_faculty] == ["MATH1001"]
     assert by_university[0].term_name == "2026학년도 1학기"
     assert by_faculty[0].term_name == "2026학년도 1학기"
+
+
+def test_soongsil_service_normalizes_unified_semester_labels() -> None:
+    client = FakeClient()
+    service = SoongsilService(build_settings(), client=client)
+
+    service.collect_courses(year="2026", semester="summer")
+
+    assert client.list_calls == [("2026", "여름학기")]
+    assert client.collect_calls == [("2026", "여름학기", [("11000001", "1100000101"), ("12000001", "1200000101")])]

@@ -9,6 +9,8 @@ def build_course(
     *,
     year: str,
     semester: str,
+    campus_code: str,
+    campus_name: str,
 ) -> Course:
     credits = row.get("cdtHcnt", "").split("/")[0] if row.get("cdtHcnt") else None
 
@@ -17,8 +19,8 @@ def build_course(
         year=year,
         semester=semester,
         term_name=row.get("semCd"),
-        campus_code=row.get("cmpCd", ""),
-        campus_name=row.get("cmpCdNm"),
+        campus_code=campus_code,
+        campus_name=campus_name,
         college_code=row.get("orgClsfCd", ""),
         college_name=row.get("crsNm"),
         department_code=row.get("dptMjrCd", ""),
@@ -34,7 +36,7 @@ def build_course(
         lecture_time_english_raw=None,
         classroom=row.get("roomKorDsc"),
         classroom_english=None,
-        campus_display_name=row.get("cmpCdNm"),
+        campus_display_name=campus_name,
         completion_division_name=row.get("cpdivNm"),
         recommended_year=None,
         credits=credits,

@@ -7,6 +7,7 @@ from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, Colleg
 from k_univ_mcp.providers.gachon.client import GachonClient
 from k_univ_mcp.providers.gachon.models import GachonCourseRow, GachonDepartmentRow
 from k_univ_mcp.providers.gachon.parser import build_course
+from k_univ_mcp.semester import normalize_provider_semester
 from k_univ_mcp.settings import AppSettings
 
 GACHON_GLOBAL_CAMPUS_CODE = "gachon-global"
@@ -27,7 +28,7 @@ class GachonService:
     def _require_term(year: str, semester: str) -> tuple[str, str]:
         if not year or not semester:
             raise ValueError("Year and semester are required and must be passed explicitly.")
-        return year, semester
+        return year, normalize_provider_semester("gachon", semester)
 
     @staticmethod
     def _require_campus(campus_code: str) -> None:
@@ -56,9 +57,9 @@ class GachonService:
         return [Campus(code=code, name=name, raw={"provider": "gachon", "groupType": group_type}) for code, (name, group_type) in GACHON_CAMPUSES.items()]
 
     def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
-        self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_term(year, semester)
         self._require_campus(campus_code)
-        _, colleges = self._initial(campus_code, year, semester)
+        _, colleges = self._initial(campus_code, resolved_year, resolved_semester)
         return [
             College(
                 campus_code=campus_code,
@@ -70,7 +71,7 @@ class GachonService:
         ]
 
     def get_departments(self, campus_code: str, college_code: str, *, year: str, semester: str) -> list[Department]:
-        self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_term(year, semester)
         self._require_campus(campus_code)
         return [
             Department(
@@ -80,19 +81,22 @@ class GachonService:
                 name=row.name,
                 raw=row.raw,
             )
-            for row in (GachonDepartmentRow.from_payload(item) for item in self.client.list_faculties(year, semester, self._group_type(campus_code), college_code))
+            for row in (
+                GachonDepartmentRow.from_payload(item)
+                for item in self.client.list_faculties(resolved_year, resolved_semester, self._group_type(campus_code), college_code)
+            )
         ]
 
     def get_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str) -> list[Course]:
-        self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_term(year, semester)
         self._require_campus(campus_code)
-        college_name = next((item.name for item in self.get_colleges(campus_code, year=year, semester=semester) if item.code == college_code), None)
-        department_name = next((item.name for item in self.get_departments(campus_code, college_code, year=year, semester=semester) if item.code == department_code), None)
+        college_name = next((item.name for item in self.get_colleges(campus_code, year=resolved_year, semester=resolved_semester) if item.code == college_code), None)
+        department_name = next((item.name for item in self.get_departments(campus_code, college_code, year=resolved_year, semester=resolved_semester) if item.code == department_code), None)
         return [
             build_course(
                 GachonCourseRow(item),
-                year=year,
-                semester=semester,
+                year=resolved_year,
+                semester=resolved_semester,
                 campus_code=campus_code,
                 campus_name=self._campus_name(campus_code),
                 college_code=college_code,
@@ -100,7 +104,13 @@ class GachonService:
                 department_code=department_code,
                 department_name=department_name,
             )
-            for item in self.client.list_courses(year, semester, self._group_type(campus_code), college_code, department_code)
+            for item in self.client.list_courses(
+                resolved_year,
+                resolved_semester,
+                self._group_type(campus_code),
+                college_code,
+                department_code,
+            )
         ]
 
     def collect_courses(

@@ -70,3 +70,13 @@ def test_service_rejects_unknown_campus_code() -> None:
         assert "Unsupported Gachon campus code" in str(exc)
     else:
         raise AssertionError("Expected GachonService to reject unsupported campus code.")
+
+
+def test_service_normalizes_unified_semester_codes() -> None:
+    client = FakeClient()
+    service = GachonService(client=client)
+
+    service.collect_courses(year="2026", semester="1")
+
+    assert client.faculty_calls == [("2026", "10", "20", "COL01"), ("2026", "10", "21", "MED01")]
+    assert client.course_calls == [("2026", "10", "20", "COL01", "D001"), ("2026", "10", "21", "MED01", "M001")]

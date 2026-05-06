@@ -49,8 +49,8 @@ def build_course(
     *,
     year: str,
     semester: str,
-    org_code: str,
-    org_name: str | None = None,
+    campus_code: str,
+    campus_name: str | None = None,
 ) -> Course:
     meeting_slots = parse_meeting_slots(row.suup_times)
 
@@ -59,8 +59,8 @@ def build_course(
         year=year,
         semester=semester,
         term_name=row.isu_term_nm,
-        campus_code=org_code,
-        campus_name=row.campus_nm or org_name,
+        campus_code=campus_code,
+        campus_name=campus_name or row.campus_nm,
         college_code=row.jojik_gb_nm or "",
         college_name=row.jojik_gb_nm,
         department_code=row.slg_sosok_cd or "",
@@ -76,7 +76,7 @@ def build_course(
         lecture_time_english_raw=None,
         classroom=row.suup_room_nms,
         classroom_english=None,
-        campus_display_name=row.campus_nm,
+        campus_display_name=campus_name or row.campus_nm,
         completion_division_name=row.isu_gb_nm,
         recommended_year=row.ban_grade,
         credits=row.hakjeom,
