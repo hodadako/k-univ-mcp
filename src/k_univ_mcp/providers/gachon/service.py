@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
+from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.gachon.client import GachonClient
 from k_univ_mcp.providers.gachon.models import GachonCourseRow, GachonDepartmentRow
 from k_univ_mcp.providers.gachon.parser import build_course
@@ -55,39 +55,39 @@ class GachonService:
         self._require_term(year, semester)
         return [Campus(code=code, name=name, raw={"provider": "gachon", "groupType": group_type}) for code, (name, group_type) in GACHON_CAMPUSES.items()]
 
-    def get_universities(self, campus_code: str, *, year: str, semester: str) -> list[University]:
+    def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
         self._require_term(year, semester)
         self._require_campus(campus_code)
-        _, universities = self._initial(campus_code, year, semester)
+        _, colleges = self._initial(campus_code, year, semester)
         return [
-            University(
+            College(
                 campus_code=campus_code,
                 code=row.code,
                 name=row.name,
                 raw=row.raw,
             )
-            for row in (GachonDepartmentRow.from_payload(item) for item in universities)
+            for row in (GachonDepartmentRow.from_payload(item) for item in colleges)
         ]
 
-    def get_faculties(self, campus_code: str, univ_code: str, *, year: str, semester: str) -> list[Faculty]:
+    def get_departments(self, campus_code: str, college_code: str, *, year: str, semester: str) -> list[Department]:
         self._require_term(year, semester)
         self._require_campus(campus_code)
         return [
-            Faculty(
+            Department(
                 campus_code=campus_code,
-                university_code=univ_code,
+                college_code=college_code,
                 code=row.code,
                 name=row.name,
                 raw=row.raw,
             )
-            for row in (GachonDepartmentRow.from_payload(item) for item in self.client.list_faculties(year, semester, self._group_type(campus_code), univ_code))
+            for row in (GachonDepartmentRow.from_payload(item) for item in self.client.list_faculties(year, semester, self._group_type(campus_code), college_code))
         ]
 
-    def get_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str) -> list[Course]:
+    def get_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str) -> list[Course]:
         self._require_term(year, semester)
         self._require_campus(campus_code)
-        university_name = next((item.name for item in self.get_universities(campus_code, year=year, semester=semester) if item.code == univ_code), None)
-        faculty_name = next((item.name for item in self.get_faculties(campus_code, univ_code, year=year, semester=semester) if item.code == faculty_code), None)
+        college_name = next((item.name for item in self.get_colleges(campus_code, year=year, semester=semester) if item.code == college_code), None)
+        department_name = next((item.name for item in self.get_departments(campus_code, college_code, year=year, semester=semester) if item.code == department_code), None)
         return [
             build_course(
                 GachonCourseRow(item),
@@ -95,12 +95,12 @@ class GachonService:
                 semester=semester,
                 campus_code=campus_code,
                 campus_name=self._campus_name(campus_code),
-                university_code=univ_code,
-                university_name=university_name,
-                faculty_code=faculty_code,
-                faculty_name=faculty_name,
+                college_code=college_code,
+                college_name=college_name,
+                department_code=department_code,
+                department_name=department_name,
             )
-            for item in self.client.list_courses(year, semester, self._group_type(campus_code), univ_code, faculty_code)
+            for item in self.client.list_courses(year, semester, self._group_type(campus_code), college_code, department_code)
         ]
 
     def collect_courses(
@@ -109,8 +109,8 @@ class GachonService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         resolved_year, resolved_semester = self._require_term(year, semester)
         courses: list[Course] = []
@@ -118,22 +118,22 @@ class GachonService:
 
         campuses = [campus for campus in self.get_campuses(year=resolved_year, semester=resolved_semester) if campus_code in {None, campus.code}]
         for campus in campuses:
-            for university in [item for item in self.get_universities(campus.code, year=resolved_year, semester=resolved_semester) if univ_code in {None, item.code}]:
-                faculties = [
+            for college in [item for item in self.get_colleges(campus.code, year=resolved_year, semester=resolved_semester) if college_code in {None, item.code}]:
+                departments = [
                     item
-                    for item in self.get_faculties(campus.code, university.code, year=resolved_year, semester=resolved_semester)
-                    if faculty_code in {None, item.code}
+                    for item in self.get_departments(campus.code, college.code, year=resolved_year, semester=resolved_semester)
+                    if department_code in {None, item.code}
                 ]
-                for faculty in faculties:
-                    payload = self.client.list_courses(resolved_year, resolved_semester, self._group_type(campus.code), university.code, faculty.code)
+                for department in departments:
+                    payload = self.client.list_courses(resolved_year, resolved_semester, self._group_type(campus.code), college.code, department.code)
                     raw_payloads.append(
                         RawPayloadDump(
                             provider="gachon",
                             year=resolved_year,
                             semester=resolved_semester,
                             campus_code=campus.code,
-                            university_code=university.code,
-                            faculty_code=faculty.code,
+                            college_code=college.code,
+                            department_code=department.code,
                             payload=payload,
                         )
                     )
@@ -145,10 +145,10 @@ class GachonService:
                                 semester=resolved_semester,
                                 campus_code=campus.code,
                                 campus_name=campus.name,
-                                university_code=university.code,
-                                university_name=university.name,
-                                faculty_code=faculty.code,
-                                faculty_name=faculty.name,
+                                college_code=college.code,
+                                college_name=college.name,
+                                department_code=department.code,
+                                department_name=department.name,
                             )
                         )
         return courses, raw_payloads

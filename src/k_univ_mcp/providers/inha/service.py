@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
+from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.inha.client import InhaClient
 from k_univ_mcp.providers.inha.models import InhaCourseRow
 from k_univ_mcp.providers.inha.parser import build_course
@@ -20,46 +20,46 @@ class InhaService:
         _ = (year, semester)
         return [Campus(code=INHA_CAMPUS_CODE, name=INHA_CAMPUS_NAME)]
 
-    def get_universities(self, campus_code: str, *, year: str, semester: str) -> list[University]:
+    def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
         if campus_code != INHA_CAMPUS_CODE:
             return []
 
-        # Now using curriculum info to get real universities (colleges)
+        # Now using curriculum info to get real colleges (colleges)
         depts = self.client.fetch_departments_from_curriculum(year=year)
         if not depts:
-            return [University(campus_code=campus_code, code="dept", name="학부(과)")]
+            return [College(campus_code=campus_code, code="dept", name="학부(과)")]
 
-        univ_names = sorted(list(set(d["university"] for d in depts)))
+        univ_names = sorted(list(set(d["college"] for d in depts)))
         return [
-            University(campus_code=campus_code, code=name, name=name)
+            College(campus_code=campus_code, code=name, name=name)
             for name in univ_names
         ]
 
-    def get_faculties(self, campus_code: str, univ_code: str, *, year: str, semester: str) -> list[Faculty]:
+    def get_departments(self, campus_code: str, college_code: str, *, year: str, semester: str) -> list[Department]:
         if campus_code != INHA_CAMPUS_CODE:
             return []
 
         depts = self.client.fetch_departments_from_curriculum(year=year)
         if not depts:
             # Fallback
-            if univ_code == "dept":
+            if college_code == "dept":
                 return [
-                    Faculty(campus_code=campus_code, university_code=univ_code, code=d["code"], name=d["name"])
+                    Department(campus_code=campus_code, college_code=college_code, code=d["code"], name=d["name"])
                     for d in self.client.fetch_departments()
                 ]
             return []
 
         return [
-            Faculty(campus_code=campus_code, university_code=univ_code, code=d["code"], name=d["name"])
-            for d in depts if d["university"] == univ_code or univ_code == "dept"
+            Department(campus_code=campus_code, college_code=college_code, code=d["code"], name=d["name"])
+            for d in depts if d["college"] == college_code or college_code == "dept"
         ]
 
-    def get_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str) -> list[Course]:
-        rows = self.client.fetch_courses(faculty_code, year=year, semester=semester)
+    def get_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str) -> list[Course]:
+        rows = self.client.fetch_courses(department_code, year=year, semester=semester)
 
-        # Try to find faculty name
-        faculties = self.get_faculties(campus_code, univ_code, year=year, semester=semester)
-        faculty_name = next((f.name for f in faculties if f.code == faculty_code), faculty_code)
+        # Try to find department name
+        departments = self.get_departments(campus_code, college_code, year=year, semester=semester)
+        department_name = next((f.name for f in departments if f.code == department_code), department_code)
 
         courses: list[Course] = []
         for r in rows:
@@ -81,10 +81,10 @@ class InhaService:
                 semester=semester,
                 campus_code=campus_code,
                 campus_name=INHA_CAMPUS_NAME,
-                university_code=univ_code,
-                university_name=univ_code if univ_code != "dept" else "학부(과)",
-                faculty_code=faculty_code,
-                faculty_name=faculty_name
+                college_code=college_code,
+                college_name=college_code if college_code != "dept" else "학부(과)",
+                department_code=department_code,
+                department_name=department_name
             ))
         return courses
 
@@ -94,22 +94,22 @@ class InhaService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
-        if faculty_code:
-            res = self.get_courses(year, semester, campus_code or INHA_CAMPUS_CODE, univ_code or "dept", faculty_code)
+        if department_code:
+            res = self.get_courses(year, semester, campus_code or INHA_CAMPUS_CODE, college_code or "dept", department_code)
             return res, []
 
         all_courses: list[Course] = []
-        if univ_code and univ_code != "dept":
-            faculties = self.get_faculties(INHA_CAMPUS_CODE, univ_code, year=year, semester=semester)
+        if college_code and college_code != "dept":
+            departments = self.get_departments(INHA_CAMPUS_CODE, college_code, year=year, semester=semester)
         else:
-            # get all depts regardless of university
-            faculties = self.get_faculties(INHA_CAMPUS_CODE, "dept", year=year, semester=semester)
+            # get all depts regardless of college
+            departments = self.get_departments(INHA_CAMPUS_CODE, "dept", year=year, semester=semester)
 
-        for f in faculties:
-            all_courses.extend(self.get_courses(year, semester, INHA_CAMPUS_CODE, f.university_code, f.code))
+        for f in departments:
+            all_courses.extend(self.get_courses(year, semester, INHA_CAMPUS_CODE, f.college_code, f.code))
 
         return all_courses, []
 

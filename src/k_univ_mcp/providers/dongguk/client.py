@@ -351,7 +351,7 @@ class DonggukClient:
                 rows.extend(DonggukClient._collect_rows(item))
         return rows
 
-    def list_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str) -> list[dict[str, Any]]:
+    def list_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str) -> list[dict[str, Any]]:
         self.ensure_session()
         form = {
             "_psnIncldPgmResn": "",
@@ -364,8 +364,8 @@ class DonggukClient:
             "@d1#OPEN_YY": year,
             "@d1#OPEN_SEM_CD": semester,
             "@d1#SBJ_NO": "",
-            "@d1#COLG_CD": univ_code,
-            "@d1#DPT_CD": faculty_code,
+            "@d1#COLG_CD": college_code,
+            "@d1#DPT_CD": department_code,
             "@d1#MJR_CD": "",
             "@d1#CURI_CD": "",
             "@d1#DETL_CURI_CD": "",

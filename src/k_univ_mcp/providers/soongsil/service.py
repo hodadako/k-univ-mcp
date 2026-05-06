@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from k_univ_mcp.models import Campus, Course, Faculty, University, RawPayloadDump
+from k_univ_mcp.models import Campus, Course, Department, College, RawPayloadDump
 from k_univ_mcp.providers.soongsil.client import SoongsilClient
 from k_univ_mcp.providers.soongsil.models import SoongsilCatalogEntry
 from k_univ_mcp.providers.soongsil.parser import SoongsilParser
@@ -36,47 +36,47 @@ class SoongsilService:
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
         _ = (year, semester)
-        return [Campus(code="soongsil", name="숭실대학교", english_name="Soongsil University")]
+        return [Campus(code="soongsil", name="숭실대학교", english_name="Soongsil College")]
 
-    def get_universities(
+    def get_colleges(
         self,
         campus_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[University]:
-        universities: list[University] = []
+    ) -> list[College]:
+        colleges: list[College] = []
         seen: set[str] = set()
         for entry in self._catalog(year, semester):
             if entry.college_code in seen:
                 continue
             seen.add(entry.college_code)
-            universities.append(
-                University(
+            colleges.append(
+                College(
                     campus_code=campus_code,
                     code=entry.college_code,
                     name=entry.college_name,
                 )
             )
-        return universities
+        return colleges
 
-    def get_faculties(
+    def get_departments(
         self,
         campus_code: str,
-        univ_code: str,
+        college_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[Faculty]:
+    ) -> list[Department]:
         return [
-            Faculty(
+            Department(
                 campus_code=campus_code,
-                university_code=univ_code,
+                college_code=college_code,
                 code=entry.department_code,
                 name=entry.department_name,
             )
             for entry in self._catalog(year, semester)
-            if entry.college_code == univ_code
+            if entry.college_code == college_code
         ]
 
     def get_courses(
@@ -84,13 +84,13 @@ class SoongsilService:
         year: str,
         semester: str,
         campus_code: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[Course]:
         courses: list[Course] = []
         term_name = self._term_name(year, semester)
 
-        for entry, html in self._collect_course_pages(year, semester, univ_code, faculty_code):
+        for entry, html in self._collect_course_pages(year, semester, college_code, department_code):
             rows = self.parser.parse_courses(html)
             for row in rows:
                 courses.append(Course(
@@ -100,10 +100,10 @@ class SoongsilService:
                     term_name=term_name,
                     campus_code=campus_code,
                     campus_name="숭실대학교",
-                    university_code=entry.college_code,
-                    university_name=entry.college_name,
-                    faculty_code=entry.department_code,
-                    faculty_name=entry.department_name,
+                    college_code=entry.college_code,
+                    college_name=entry.college_name,
+                    department_code=entry.department_code,
+                    department_name=entry.department_name,
                     course_code=row.course_number,
                     section=row.section,
                     course_key=f"{entry.department_code}:{row.course_number}-{row.section}",
@@ -135,12 +135,12 @@ class SoongsilService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         campus_code = campus_code or "soongsil"
-        selected_univ_code = univ_code or "soongsil_all"
-        selected_faculty_code = faculty_code or "soongsil_all"
+        selected_univ_code = college_code or "soongsil_all"
+        selected_faculty_code = department_code or "soongsil_all"
 
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
@@ -156,10 +156,10 @@ class SoongsilService:
                     term_name=term_name,
                     campus_code=campus_code,
                     campus_name="숭실대학교",
-                    university_code=entry.college_code,
-                    university_name=entry.college_name,
-                    faculty_code=entry.department_code,
-                    faculty_name=entry.department_name,
+                    college_code=entry.college_code,
+                    college_name=entry.college_name,
+                    department_code=entry.department_code,
+                    department_name=entry.department_name,
                     course_code=row.course_number,
                     section=row.section,
                     course_key=f"{entry.department_code}:{row.course_number}-{row.section}",
@@ -190,15 +190,15 @@ class SoongsilService:
                     year=year,
                     semester=semester,
                     campus_code=campus_code,
-                    university_code=entry.college_code,
-                    faculty_code=entry.department_code,
+                    college_code=entry.college_code,
+                    department_code=entry.department_code,
                     payload=[{"college": entry.college_name, "department": entry.department_name, "html_length": len(html), "course_count": len(rows)}],
                 )
             )
 
         unique_courses: dict[tuple[str | None, str | None, str | None], Course] = {}
         for course in courses:
-            key = (course.faculty_code, course.course_code, course.section)
+            key = (course.department_code, course.course_code, course.section)
             unique_courses[key] = course
         return list(unique_courses.values()), raw_payloads
 
@@ -215,15 +215,15 @@ class SoongsilService:
         self,
         year: str,
         semester: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[tuple[SoongsilCatalogEntry, str]]:
         catalog = self._catalog(year, semester)
         selected = catalog
-        if faculty_code != "soongsil_all":
-            selected = [entry for entry in catalog if entry.department_code == faculty_code]
-        elif univ_code != "soongsil_all":
-            selected = [entry for entry in catalog if entry.college_code == univ_code]
+        if department_code != "soongsil_all":
+            selected = [entry for entry in catalog if entry.department_code == department_code]
+        elif college_code != "soongsil_all":
+            selected = [entry for entry in catalog if entry.college_code == college_code]
         return self.client.collect_course_pages(year, semester, selected)
 
 def create_soongsil_service(settings: AppSettings) -> SoongsilService:

@@ -31,7 +31,7 @@ def test_department_row_prefers_codes_and_names_from_full_path() -> None:
     assert row.code == "DS030412"
     assert row.name == "광고홍보학과"
     assert row.campus_code == "CM030.10"
-    assert row.university_code == "DS0304"
+    assert row.college_code == "DS0304"
 
 
 def test_build_course_maps_core_fields() -> None:
@@ -63,10 +63,10 @@ def test_build_course_maps_core_fields() -> None:
         semester="CM160.10",
         campus_code="CM030.10",
         campus_name="서울",
-        university_code="DS0304",
-        university_name="사회과학대학",
-        faculty_code="DS030412",
-        faculty_name="광고홍보학과",
+        college_code="DS0304",
+        college_name="사회과학대학",
+        department_code="DS030412",
+        department_name="광고홍보학과",
     )
 
     assert course.provider == "dongguk"
@@ -74,5 +74,5 @@ def test_build_course_maps_core_fields() -> None:
     assert course.term_name == "1학기"
     assert course.meeting_slots[0].day_code == "TUE"
     assert course.meeting_slots[1].day_code == "TUE"
-    assert course.faculty_code == "DS030412"
-    assert course.faculty_name == "광고홍보학과"
+    assert course.department_code == "DS030412"
+    assert course.department_name == "광고홍보학과"

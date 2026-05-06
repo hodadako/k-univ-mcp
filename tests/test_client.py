@@ -80,9 +80,9 @@ def test_post_refreshes_after_auth_like_json_payload() -> None:
         refresh_cookie_header=lambda: refreshes.append("refreshed") or "JSESSIONID=fresh; NetFunnel_ID=fresh",
     )
 
-    faculties = client.list_faculties("2026", "10", "s1", "s1103")
+    departments = client.list_faculties("2026", "10", "s1", "s1103")
 
-    assert faculties[0]["deptCd"] == "0301"
+    assert departments[0]["deptCd"] == "0301"
     assert refreshes == ["refreshed"]
     assert len(session.calls) == 2
 
@@ -101,9 +101,9 @@ def test_post_bootstraps_before_first_request_when_cookie_header_is_empty() -> N
         refresh_cookie_header=lambda: refreshes.append("refreshed") or "JSESSIONID=fresh; NetFunnel_ID=fresh",
     )
 
-    universities = client.list_universities("2026", "10", "s1")
+    colleges = client.list_universities("2026", "10", "s1")
 
-    assert universities[0]["deptCd"] == "s1103"
+    assert colleges[0]["deptCd"] == "s1103"
     assert refreshes == ["refreshed"]
     assert len(session.calls) == 1
     assert client.cookie_header == "JSESSIONID=fresh; NetFunnel_ID=fresh"
@@ -164,9 +164,9 @@ def test_list_universities_uses_live_discovery_endpoint_with_term_and_campus() -
         sleep_seconds=0,
     )
 
-    universities = client.list_universities("2026", "11", "s1")
+    colleges = client.list_universities("2026", "11", "s1")
 
-    assert universities[0]["deptCd"] == "s1103"
+    assert colleges[0]["deptCd"] == "s1103"
     assert len(session.calls) == 1
     _, data, _ = session.calls[0]
     assert data["@d1#dsNm"] == "dsUnivCd"
@@ -192,9 +192,9 @@ def test_list_faculties_refreshes_after_abnormal_empty_payload() -> None:
         refresh_cookie_header=lambda: refreshes.append("refreshed") or "JSESSIONID=fresh; NetFunnel_ID=fresh",
     )
 
-    faculties = client.list_faculties("2026", "10", "s1", "s1103")
+    departments = client.list_faculties("2026", "10", "s1", "s1103")
 
-    assert faculties[0]["deptCd"] == "0301"
+    assert departments[0]["deptCd"] == "0301"
     assert refreshes == ["refreshed"]
     assert len(session.calls) == 2
 

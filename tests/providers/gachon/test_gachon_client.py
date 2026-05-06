@@ -48,10 +48,10 @@ def test_list_universities_bootstraps_wmonid_and_reads_onload_payload() -> None:
     )
     client = GachonClient(session=cast(requests.Session, cast(object, session)))
 
-    terms, universities = client.list_universities("20")
+    terms, colleges = client.list_universities("20")
 
     assert terms == [{"YEAR": "2026", "TERM_CD": "10"}]
-    assert universities == [{"DPT_CD": "COL01", "LABEL": "AI대학"}]
+    assert colleges == [{"DPT_CD": "COL01", "LABEL": "AI대학"}]
     assert session.calls[0][0] == "GET"
     assert session.calls[1][1].endswith(ONLOAD_PATH)
 
@@ -61,9 +61,9 @@ def test_list_faculties_builds_expected_form_data() -> None:
     session.cookies.set("WMONID", "test-cookie")
     client = GachonClient(session=cast(requests.Session, cast(object, session)))
 
-    faculties = client.list_faculties("2026", "10", "21", "COL01")
+    departments = client.list_faculties("2026", "10", "21", "COL01")
 
-    assert faculties == [{"DPT_CD": "D001", "LABEL": "컴퓨터공학과"}]
+    assert departments == [{"DPT_CD": "D001", "LABEL": "컴퓨터공학과"}]
     method, url, data, timeout = session.calls[0]
     assert method == "POST"
     assert url.endswith(DEPT_LIST_PATH)

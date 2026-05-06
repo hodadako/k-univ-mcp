@@ -27,7 +27,9 @@
 
 ## 동국대학교
 
-- `DONGGUK_COOKIE`: 수동 세션 쿠키
+- `DONGGUK_COOKIE`: 공통 수동 세션 쿠키
+- `DONGGUK_SEOUL_COOKIE`: 서울 캠퍼스 전용 수동 세션 쿠키
+- `DONGGUK_WISE_COOKIE`: WISE 캠퍼스 전용 수동 세션 쿠키
 - `DONGGUK_ENABLE_BROWSER_BOOTSTRAP`: 동국대 browser bootstrap 사용 여부. 기본값은 `true`
 - `DONGGUK_REFERER`: 동국대 요청 referer
 - `DONGGUK_SESSION_REFRESH_RETRIES`: 세션 만료로 판단됐을 때 재시도 횟수
@@ -36,6 +38,15 @@
 - `DONGGUK_RETRY_BACKOFF`: HTTP 재시도 backoff
 - `DONGGUK_SLEEP_SECONDS`: 요청 사이 대기 시간
 - `DONGGUK_USER_AGENT`: 동국대 요청에 사용할 User-Agent
+
+## 가천대학교
+
+- `GACHON_COOKIE`: 수동 세션 쿠키
+- `GACHON_TIMEOUT`: 요청 timeout(초)
+- `GACHON_RETRY_TOTAL`: HTTP 재시도 횟수
+- `GACHON_RETRY_BACKOFF`: HTTP 재시도 backoff
+- `GACHON_SLEEP_SECONDS`: 요청 사이 대기 시간
+- `GACHON_USER_AGENT`: 가천대 요청에 사용할 User-Agent
 
 ## 인하대학교
 
@@ -46,6 +57,15 @@
 
 - `SUNGSHIN_TIMEOUT`: 요청 timeout(초)
 - `SUNGSHIN_SLEEP_SECONDS`: 요청 사이 대기 시간
+
+## 한양대학교
+
+- `HANYANG_COOKIE`: 수동 세션 쿠키
+- `HANYANG_TIMEOUT`: 요청 timeout(초)
+- `HANYANG_SLEEP_SECONDS`: 요청 사이 대기 시간
+- `HANYANG_PGM_ID`: 프로그램 ID
+- `HANYANG_MENU_ID`: 메뉴 ID
+- `HANYANG_TK`: 세션 기반 토큰
 
 ## 참고
 

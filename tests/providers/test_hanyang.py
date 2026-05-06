@@ -47,8 +47,8 @@ def test_build_course():
     assert course.course_code == "HANYANG01"
     assert course.title == "테스트 강의"
     assert course.term_name == "1학기"
-    assert course.faculty_code == "H0001234"
-    assert course.faculty_name == "컴퓨터소프트웨어학부"
+    assert course.department_code == "H0001234"
+    assert course.department_name == "컴퓨터소프트웨어학부"
     assert course.professor_name == "홍길동"
     assert course.credits == "3"
     assert len(course.meeting_slots) == 2

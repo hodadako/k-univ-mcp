@@ -123,7 +123,7 @@ def make_root() -> MemoryPath:
     return MemoryPath(("test_out",))
 
 
-def make_course(*, provider: str, semester: str, course_code: str, title: str, campus_code: str, campus_name: str, university_code: str, university_name: str, faculty_code: str, faculty_name: str, raw: dict[str, object]) -> Course:
+def make_course(*, provider: str, semester: str, course_code: str, title: str, campus_code: str, campus_name: str, college_code: str, college_name: str, department_code: str, department_name: str, raw: dict[str, object]) -> Course:
     return Course(
         provider=provider,
         year="2026",
@@ -131,10 +131,10 @@ def make_course(*, provider: str, semester: str, course_code: str, title: str, c
         term_name="2026-1학기" if provider == "yonsei" else "1학기",
         campus_code=campus_code,
         campus_name=campus_name,
-        university_code=university_code,
-        university_name=university_name,
-        faculty_code=faculty_code,
-        faculty_name=faculty_name,
+        college_code=college_code,
+        college_name=college_name,
+        department_code=department_code,
+        department_name=department_name,
         course_code=course_code,
         section="01",
         course_key=f"{course_code}-01",
@@ -155,8 +155,8 @@ def make_course(*, provider: str, semester: str, course_code: str, title: str, c
         evaluation_method_name="상대평가",
         cancelled=None,
         cancelled_label=None,
-        established_department_code=faculty_code,
-        established_department_name=faculty_name,
+        established_department_code=department_code,
+        established_department_name=department_name,
         meeting_slots=[MeetingSlot(day_code="MON", day_name="Monday", period=1)],
         parse_warnings=[],
         raw=raw,
@@ -172,10 +172,10 @@ def test_export_courses_writes_all_formats_without_filesystem(monkeypatch) -> No
         title="미적분학",
         campus_code="s1",
         campus_name="학부(신촌)",
-        university_code="s1103",
-        university_name="이과대학",
-        faculty_code="0301",
-        faculty_name="수학전공",
+        college_code="s1103",
+        college_name="이과대학",
+        department_code="0301",
+        department_name="수학전공",
         raw={"subjtnb": "MATH1001"},
     )
     raw_payload = RawPayloadDump(
@@ -183,8 +183,8 @@ def test_export_courses_writes_all_formats_without_filesystem(monkeypatch) -> No
         year="2026",
         semester="10",
         campus_code="s1",
-        university_code="s1103",
-        faculty_code="0301",
+        college_code="s1103",
+        department_code="0301",
         payload=[{"subjtnb": "MATH1001"}],
     )
 
@@ -213,10 +213,10 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         title="불교학맵핑",
         campus_code="CM030.21",
         campus_name="WISE",
-        university_code="DK0201",
-        university_name="불교문화대학",
-        faculty_code="DK02010101",
-        faculty_name="불교학부",
+        college_code="DK0201",
+        college_name="불교문화대학",
+        department_code="DK02010101",
+        department_name="불교학부",
         raw={"SBJ_NO": "BUD10126"},
     )
     course2 = make_course(
@@ -226,10 +226,10 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         title="국어학개론",
         campus_code="CM030.21",
         campus_name="WISE",
-        university_code="DK0202",
-        university_name="인문과학대학",
-        faculty_code="DK02020101",
-        faculty_name="국어국문학과",
+        college_code="DK0202",
+        college_name="인문과학대학",
+        department_code="DK02020101",
+        department_name="국어국문학과",
         raw={"SBJ_NO": "KOR1001"},
     )
     raw_payload1 = RawPayloadDump(
@@ -237,8 +237,8 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         year="2026",
         semester="CM160.10",
         campus_code="CM030.21",
-        university_code="DK0201",
-        faculty_code="DK02010101",
+        college_code="DK0201",
+        department_code="DK02010101",
         payload=[{"SBJ_NO": "BUD10126"}],
     )
     raw_payload2 = RawPayloadDump(
@@ -246,8 +246,8 @@ def test_export_course_batches_streams_multiple_batches_without_filesystem(monke
         year="2026",
         semester="CM160.10",
         campus_code="CM030.21",
-        university_code="DK0202",
-        faculty_code="DK02020101",
+        college_code="DK0202",
+        department_code="DK02020101",
         payload=[{"SBJ_NO": "KOR1001"}],
     )
 
@@ -288,10 +288,10 @@ def test_merge_exported_batches_merges_batch_artifacts_without_filesystem(monkey
         title="불교학맵핑",
         campus_code="CM030.21",
         campus_name="WISE",
-        university_code="DK0201",
-        university_name="불교문화대학",
-        faculty_code="DK02010101",
-        faculty_name="불교학부",
+        college_code="DK0201",
+        college_name="불교문화대학",
+        department_code="DK02010101",
+        department_name="불교학부",
         raw={"SBJ_NO": "BUD10126"},
     )
     course2 = make_course(
@@ -301,10 +301,10 @@ def test_merge_exported_batches_merges_batch_artifacts_without_filesystem(monkey
         title="국어학개론",
         campus_code="CM030.21",
         campus_name="WISE",
-        university_code="DK0202",
-        university_name="인문과학대학",
-        faculty_code="DK02020101",
-        faculty_name="국어국문학과",
+        college_code="DK0202",
+        college_name="인문과학대학",
+        department_code="DK02020101",
+        department_name="국어국문학과",
         raw={"SBJ_NO": "KOR1001"},
     )
     (batch0 / "dongguk_2026_CM160.10.jsonl").write_text(json.dumps(course1.to_dict(), ensure_ascii=False) + "\n")

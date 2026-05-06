@@ -93,12 +93,12 @@ def test_soongsil_service_builds_dynamic_universities_faculties_and_courses() ->
     client = FakeClient()
     service = SoongsilService(build_settings(), client=client)
 
-    universities = service.get_universities("soongsil", year="2026", semester="1")
-    faculties = service.get_faculties("soongsil", "11000001", year="2026", semester="1")
+    colleges = service.get_colleges("soongsil", year="2026", semester="1")
+    departments = service.get_departments("soongsil", "11000001", year="2026", semester="1")
     courses, raw_payloads = service.collect_courses(year="2026", semester="1")
 
-    assert [university.code for university in universities] == ["11000001", "12000001"]
-    assert [faculty.code for faculty in faculties] == ["1100000101"]
+    assert [college.code for college in colleges] == ["11000001", "12000001"]
+    assert [department.code for department in departments] == ["1100000101"]
     assert len(courses) == 2
     assert {course.course_code for course in courses} == {"2150517201", "MATH1001"}
     assert {course.term_name for course in courses} == {"2026학년도 1학기"}

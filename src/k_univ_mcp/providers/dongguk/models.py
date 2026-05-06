@@ -36,7 +36,7 @@ class DonggukDepartmentRow:
     code: str
     name: str
     campus_code: str | None
-    university_code: str | None
+    college_code: str | None
     level_code: str | None
     full_name: str | None
     english_name: str | None
@@ -67,7 +67,7 @@ class DonggukDepartmentRow:
             code=str(code),
             name=str(name),
             campus_code=_first_non_empty(payload, "CAMPUS_CD", "CAMPUS_FG"),
-            university_code=_first_non_empty(payload, "COLG_CD"),
+            college_code=_first_non_empty(payload, "COLG_CD"),
             level_code=_first_non_empty(payload, "DEPT_LVL_CD", "ORGN_CLSF_CD"),
             full_name=raw_full_name,
             english_name=_first_non_empty(payload, "DEPT_NM_ENG", "ENG_NM", "CAMPUS_NM_ENG", "COLG_NM_ENG"),

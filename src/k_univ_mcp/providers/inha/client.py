@@ -75,7 +75,7 @@ class InhaClient:
             if len(tds) < 3:
                 continue
 
-            univ_name = tds[0].get_text(strip=True)
+            college_name = tds[0].get_text(strip=True)
             dept_name = tds[1].get_text(strip=True)
             major_name = tds[2].get_text(strip=True)
 
@@ -89,7 +89,7 @@ class InhaClient:
                         depts.append({
                             "code": code,
                             "name": f"{dept_name} / {major_name}",
-                            "university": univ_name
+                            "college": college_name
                         })
         return depts
 
@@ -106,7 +106,7 @@ class InhaClient:
                 results.append({"code": val, "name": opt.get_text(strip=True)})
         return results
 
-    def fetch_courses(self, faculty_code: str, year: str | None = None, semester: str | None = None) -> list[dict[str, Any]]:
+    def fetch_courses(self, department_code: str, year: str | None = None, semester: str | None = None) -> list[dict[str, Any]]:
         form_data, _ = self._get_initial_form(year, semester)
 
         url = f"{BASE_URL}{SEARCH_PATH}"
@@ -114,7 +114,7 @@ class InhaClient:
         dept_data = form_data.copy()
         dept_data.update({
             "__EVENTTARGET": "ddlDept",
-            "ddlDept": faculty_code,
+            "ddlDept": department_code,
             "hhdSrchGubun": "search"
         })
         res = self.session.post(url, data=dept_data, timeout=self.timeout)

@@ -8,7 +8,7 @@ from typing import Any
 
 from k_univ_mcp.browser_bootstrap import BrowserBootstrapSettings, BrowserBootstrapTarget
 from k_univ_mcp.exporter import export_course_batches, merge_exported_batches
-from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
+from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.dongguk.bootstrap import DONGGUK_REQUIRED_BROWSER_COOKIES, DonggukBrowserBootstrap
 from k_univ_mcp.providers.dongguk.client import DonggukClient
 from k_univ_mcp.providers.dongguk.models import DonggukCourseRow, DonggukDepartmentRow
@@ -66,8 +66,8 @@ def export_dongguk_courses(
     semester: str,
     outdir: Path,
     campus_code: str | None = None,
-    univ_code: str | None = None,
-    faculty_code: str | None = None,
+    college_code: str | None = None,
+    department_code: str | None = None,
     batch_index: int | None = None,
     batch_size: int | None = None,
 ) -> dict[str, Any]:
@@ -77,8 +77,8 @@ def export_dongguk_courses(
         year=year,
         semester=semester,
         campus_code=campus_code,
-        univ_code=univ_code,
-        faculty_code=faculty_code,
+        college_code=college_code,
+        department_code=department_code,
     )
     total_batches = service.batch_count(total_targets, resolved_batch_size)
 
@@ -88,8 +88,8 @@ def export_dongguk_courses(
                 year=year,
                 semester=semester,
                 campus_code=campus_code,
-                univ_code=univ_code,
-                faculty_code=faculty_code,
+                college_code=college_code,
+                department_code=department_code,
                 batch_index=batch_index,
                 batch_size=resolved_batch_size,
             ),
@@ -116,8 +116,8 @@ def export_dongguk_courses(
                 year=year,
                 semester=semester,
                 campus_code=campus_code,
-                univ_code=univ_code,
-                faculty_code=faculty_code,
+                college_code=college_code,
+                department_code=department_code,
                 batch_index=current_batch_index,
                 batch_size=resolved_batch_size,
             ),
@@ -190,8 +190,8 @@ def _pick_name_from_full_name(full_name: str | None, *, take_last: bool = False)
 class DonggukCatalog:
     payload: dict[str, Any]
     campuses: list[Campus]
-    universities: list[University]
-    faculties: list[Faculty]
+    colleges: list[College]
+    departments: list[Department]
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "DonggukCatalog":
@@ -203,8 +203,8 @@ class DonggukCatalog:
         ]
 
         campus_map: dict[str, Campus] = {}
-        university_map: dict[str, University] = {}
-        faculty_map: dict[str, Faculty] = {}
+        university_map: dict[str, College] = {}
+        faculty_map: dict[str, Department] = {}
 
         for row in rows:
             payload_row = DonggukDepartmentRow.from_payload(row)
@@ -214,32 +214,32 @@ class DonggukCatalog:
                 campus_name = campus_name or _strip_prefix(row.get("CAMPUS_NM")) or payload_row.name or campus_code
                 campus_map[campus_code] = Campus(code=campus_code, name=campus_name, english_name=payload_row.english_name, raw=row)
 
-            university_code = payload_row.university_code
-            if university_code and university_code not in university_map:
-                university_name = _pick_name_from_full_name(
+            college_code = payload_row.college_code
+            if college_code and college_code not in university_map:
+                college_name = _pick_name_from_full_name(
                     row.get("DEPT_NM_FULL") or row.get("FULL_NAME") or row.get("COLG_NM_FULL") or row.get("COLG_NM"),
                     take_last=False,
                 ) or _strip_prefix(row.get("COLG_NM") or row.get("DEPT_NM") or payload_row.name)
-                university_map[university_code] = University(
+                university_map[college_code] = College(
                     campus_code=campus_code,
-                    code=university_code,
-                    name=university_name or payload_row.name,
+                    code=college_code,
+                    name=college_name or payload_row.name,
                     english_name=payload_row.english_name,
                     raw=row,
                 )
 
             if payload_row.level_code == "CM040.30" and str(row.get("USE_YN", "Y")).upper() == "Y":
-                faculty_code = payload_row.code
-                if faculty_code not in faculty_map:
-                    faculty_name = _pick_name_from_full_name(
+                department_code = payload_row.code
+                if department_code not in faculty_map:
+                    department_name = _pick_name_from_full_name(
                         row.get("DEPT_NM_FULL") or row.get("FULL_NAME") or row.get("DEPT_NM"),
                         take_last=True,
                     ) or payload_row.name
-                    faculty_map[faculty_code] = Faculty(
+                    faculty_map[department_code] = Department(
                         campus_code=campus_code,
-                        university_code=university_code or "",
-                        code=faculty_code,
-                        name=faculty_name,
+                        college_code=college_code or "",
+                        code=department_code,
+                        name=department_name,
                         english_name=payload_row.english_name,
                         raw=row,
                     )
@@ -247,8 +247,8 @@ class DonggukCatalog:
         return cls(
             payload=payload,
             campuses=list(campus_map.values()),
-            universities=list(university_map.values()),
-            faculties=list(faculty_map.values()),
+            colleges=list(university_map.values()),
+            departments=list(faculty_map.values()),
         )
 
 
@@ -395,46 +395,46 @@ class DonggukService:
         return [Campus(code=adapter.code, name=adapter.name, raw={"CAMPUS_CD": adapter.code}) for adapter in DONGGUK_CAMPUS_ADAPTERS.values()]
 
     @staticmethod
-    def _to_universities(campus_code: str, rows: list[University]) -> list[University]:
-        return [university for university in rows if university.campus_code in {None, campus_code, ""} or university.campus_code == campus_code]
+    def _to_universities(campus_code: str, rows: list[College]) -> list[College]:
+        return [college for college in rows if college.campus_code in {None, campus_code, ""} or college.campus_code == campus_code]
 
     @staticmethod
-    def _to_faculties(campus_code: str, univ_code: str, rows: list[Faculty]) -> list[Faculty]:
+    def _to_faculties(campus_code: str, college_code: str, rows: list[Department]) -> list[Department]:
         return [
-            faculty
-            for faculty in rows
-            if (faculty.campus_code in {None, campus_code, ""} or faculty.campus_code == campus_code)
-            and (faculty.university_code in {None, univ_code, ""} or faculty.university_code == univ_code)
+            department
+            for department in rows
+            if (department.campus_code in {None, campus_code, ""} or department.campus_code == campus_code)
+            and (department.college_code in {None, college_code, ""} or department.college_code == college_code)
         ]
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
         self._require_term(year, semester)
         return [Campus(code=adapter.code, name=adapter.name, raw={"CAMPUS_CD": adapter.code}) for adapter in DONGGUK_CAMPUS_ADAPTERS.values()]
 
-    def get_universities(self, campus_code: str, *, year: str, semester: str) -> list[University]:
+    def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
         self._require_term(year, semester)
         self._require_adapter(campus_code)
-        return self._to_universities(campus_code, self._catalog(campus_code, year, semester).universities)
+        return self._to_universities(campus_code, self._catalog(campus_code, year, semester).colleges)
 
-    def get_faculties(
+    def get_departments(
         self,
         campus_code: str,
-        univ_code: str,
+        college_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[Faculty]:
+    ) -> list[Department]:
         self._require_term(year, semester)
         self._require_adapter(campus_code)
-        return self._to_faculties(campus_code, univ_code, self._catalog(campus_code, year, semester).faculties)
+        return self._to_faculties(campus_code, college_code, self._catalog(campus_code, year, semester).departments)
 
     def get_courses(
         self,
         year: str,
         semester: str,
         campus_code: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[Course]:
         self._require_term(year, semester)
         self._require_adapter(campus_code)
@@ -443,9 +443,9 @@ class DonggukService:
         campus_name = next((campus.name for campus in catalog.campuses if campus.code == campus_code), None)
         if campus_name is None:
             campus_name = self._require_adapter(campus_code).name
-        university_name = next((university.name for university in catalog.universities if university.code == univ_code), None)
-        faculty_name = next((faculty.name for faculty in catalog.faculties if faculty.code == faculty_code), None)
-        rows = self._require_client(campus_code).list_courses(year, resolved_semester, campus_code, univ_code, faculty_code)
+        college_name = next((college.name for college in catalog.colleges if college.code == college_code), None)
+        department_name = next((department.name for department in catalog.departments if department.code == department_code), None)
+        rows = self._require_client(campus_code).list_courses(year, resolved_semester, campus_code, college_code, department_code)
         return [
             build_course(
                 DonggukCourseRow(row),
@@ -453,10 +453,10 @@ class DonggukService:
                 semester=resolved_semester,
                 campus_code=campus_code,
                 campus_name=campus_name,
-                university_code=univ_code,
-                university_name=university_name,
-                faculty_code=faculty_code,
-                faculty_name=faculty_name,
+                college_code=college_code,
+                college_name=college_name,
+                department_code=department_code,
+                department_name=department_name,
             )
             for row in rows
         ]
@@ -467,8 +467,8 @@ class DonggukService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
@@ -477,8 +477,8 @@ class DonggukService:
             year=year,
             semester=semester,
             campus_code=campus_code,
-            univ_code=univ_code,
-            faculty_code=faculty_code,
+            college_code=college_code,
+            department_code=department_code,
         ):
             courses.extend(batch_courses)
             raw_payloads.extend(batch_raw_payloads)
@@ -490,12 +490,12 @@ class DonggukService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
-    ) -> list[tuple[Campus, University, Faculty]]:
+        college_code: str | None = None,
+        department_code: str | None = None,
+    ) -> list[tuple[Campus, College, Department]]:
         self._require_term(year, semester)
 
-        targets: list[tuple[Campus, University, Faculty]] = []
+        targets: list[tuple[Campus, College, Department]] = []
         campuses = [
             Campus(code=adapter.code, name=adapter.name, raw={"CAMPUS_CD": adapter.code})
             for adapter in DONGGUK_CAMPUS_ADAPTERS.values()
@@ -504,11 +504,11 @@ class DonggukService:
         for campus in campuses:
             resolved_semester = self._resolve_semester(campus.code, year, semester)
             catalog = self._catalog(campus.code, year, resolved_semester)
-            universities = [university for university in self._to_universities(campus.code, catalog.universities) if univ_code in {None, university.code, ""}]
-            for university in universities:
-                faculties = [faculty for faculty in self._to_faculties(campus.code, university.code, catalog.faculties) if faculty_code in {None, faculty.code, ""}]
-                for faculty in faculties:
-                    targets.append((campus, university, faculty))
+            colleges = [college for college in self._to_universities(campus.code, catalog.colleges) if college_code in {None, college.code, ""}]
+            for college in colleges:
+                departments = [department for department in self._to_faculties(campus.code, college.code, catalog.departments) if department_code in {None, department.code, ""}]
+                for department in departments:
+                    targets.append((campus, college, department))
         return targets
 
     def count_course_targets(
@@ -517,16 +517,16 @@ class DonggukService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> int:
         return len(
             self._course_targets(
                 year=year,
                 semester=semester,
                 campus_code=campus_code,
-                univ_code=univ_code,
-                faculty_code=faculty_code,
+                college_code=college_code,
+                department_code=department_code,
             )
         )
 
@@ -543,8 +543,8 @@ class DonggukService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
         batch_index: int | None = None,
         batch_size: int | None = None,
     ):
@@ -552,8 +552,8 @@ class DonggukService:
             year=year,
             semester=semester,
             campus_code=campus_code,
-            univ_code=univ_code,
-            faculty_code=faculty_code,
+            college_code=college_code,
+            department_code=department_code,
         )
 
         if batch_size is not None:
@@ -568,16 +568,16 @@ class DonggukService:
         elif batch_index not in {None, 0}:
             raise ValueError("batch_index requires batch_size to be provided.")
 
-        for campus, university, faculty in targets:
+        for campus, college, department in targets:
             resolved_semester = self._resolve_semester(campus.code, year, semester)
-            payload = self._require_client(campus.code).list_courses(year, resolved_semester, campus.code, university.code, faculty.code)
+            payload = self._require_client(campus.code).list_courses(year, resolved_semester, campus.code, college.code, department.code)
             raw_payload = RawPayloadDump(
                 provider="dongguk",
                 year=year,
                 semester=resolved_semester,
                 campus_code=campus.code,
-                university_code=university.code,
-                faculty_code=faculty.code,
+                college_code=college.code,
+                department_code=department.code,
                 payload=payload,
             )
             batch_courses = [
@@ -587,10 +587,10 @@ class DonggukService:
                     semester=resolved_semester,
                     campus_code=campus.code,
                     campus_name=campus.name,
-                    university_code=university.code,
-                    university_name=university.name,
-                    faculty_code=faculty.code,
-                    faculty_name=faculty.name,
+                    college_code=college.code,
+                    college_name=college.name,
+                    department_code=department.code,
+                    department_name=department.name,
                 )
                 for row in payload
             ]

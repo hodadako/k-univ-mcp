@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from k_univ_mcp.browser_bootstrap import BrowserBootstrapSettings, BrowserBootstrapTarget, BrowserSessionBootstrap
-from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
+from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.yonsei.bootstrap import EnvCookieBootstrap
 from k_univ_mcp.providers.yonsei.client import YonseiClient, YonseiError
 from k_univ_mcp.providers.yonsei.models import YonseiCourseRow, YonseiDepartmentRow
@@ -35,7 +35,7 @@ class YonseiSeedCatalog:
         payload = self._load("campuses.json")
         return [YonseiDepartmentRow.from_payload(item) for item in payload.get("dsCampsBusnsCd", [])]
 
-    def universities(self, campus_code: str) -> list[YonseiDepartmentRow]:
+    def colleges(self, campus_code: str) -> list[YonseiDepartmentRow]:
         file_name = f"universities_{campus_code}.json"
         try:
             payload = self._load(file_name)
@@ -52,7 +52,7 @@ class YonseiService:
     def _require_client(self) -> YonseiClient | Any:
         if self.client is None:
             raise ValueError(
-                "Yonsei live API access requires YONSEI_COOKIE. Seeded campus and university discovery can work without it."
+                "Yonsei live API access requires YONSEI_COOKIE. Seeded campus and college discovery can work without it."
             )
         return self.client
 
@@ -67,9 +67,9 @@ class YonseiService:
         return [Campus(code=row.code, name=row.name, english_name=row.english_name, raw=row.raw) for row in rows]
 
     @staticmethod
-    def _to_universities(campus_code: str, rows: list[YonseiDepartmentRow]) -> list[University]:
+    def _to_universities(campus_code: str, rows: list[YonseiDepartmentRow]) -> list[College]:
         return [
-            University(
+            College(
                 campus_code=campus_code,
                 code=row.code,
                 name=row.name,
@@ -88,16 +88,16 @@ class YonseiService:
             [YonseiDepartmentRow.from_payload(item) for item in self.client.list_campuses(year, semester)]
         )
 
-    def get_universities(
+    def get_colleges(
         self,
         campus_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[University]:
+    ) -> list[College]:
         self._require_term(year, semester)
         if self.client is None:
-            return self._to_universities(campus_code, self.seed_catalog.universities(campus_code))
+            return self._to_universities(campus_code, self.seed_catalog.colleges(campus_code))
 
         return self._to_universities(
             campus_code,
@@ -106,26 +106,26 @@ class YonseiService:
             ],
         )
 
-    def get_faculties(
+    def get_departments(
         self,
         campus_code: str,
-        univ_code: str,
+        college_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[Faculty]:
+    ) -> list[Department]:
         resolved_year, resolved_semester = self._require_term(year, semester)
-        faculties = self._require_client().list_faculties(resolved_year, resolved_semester, campus_code, univ_code)
+        departments = self._require_client().list_faculties(resolved_year, resolved_semester, campus_code, college_code)
         return [
-            Faculty(
+            Department(
                 campus_code=campus_code,
-                university_code=univ_code,
+                college_code=college_code,
                 code=row.code,
                 name=row.name,
                 english_name=row.english_name,
                 raw=row.raw,
             )
-            for row in (YonseiDepartmentRow.from_payload(item) for item in faculties)
+            for row in (YonseiDepartmentRow.from_payload(item) for item in departments)
         ]
 
     def get_courses(
@@ -133,27 +133,27 @@ class YonseiService:
         year: str,
         semester: str,
         campus_code: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[Course]:
         self._require_term(year, semester)
         campus_name = next(
             (campus.name for campus in self.get_campuses(year=year, semester=semester) if campus.code == campus_code),
             None,
         )
-        univ_name = next(
+        college_name = next(
             (
                 univ.name
-                for univ in self.get_universities(campus_code, year=year, semester=semester)
-                if univ.code == univ_code
+                for univ in self.get_colleges(campus_code, year=year, semester=semester)
+                if univ.code == college_code
             ),
             None,
         )
-        faculty_name = next(
+        department_name = next(
             (
-                faculty.name
-                for faculty in self.get_faculties(campus_code, univ_code, year=year, semester=semester)
-                if faculty.code == faculty_code
+                department.name
+                for department in self.get_departments(campus_code, college_code, year=year, semester=semester)
+                if department.code == department_code
             ),
             None,
         )
@@ -164,12 +164,12 @@ class YonseiService:
                 semester=semester,
                 campus_code=campus_code,
                 campus_name=campus_name,
-                university_code=univ_code,
-                university_name=univ_name,
-                faculty_code=faculty_code,
-                faculty_name=faculty_name,
+                college_code=college_code,
+                college_name=college_name,
+                department_code=department_code,
+                department_name=department_name,
             )
-            for item in self._require_client().list_courses(year, semester, campus_code, univ_code, faculty_code)
+            for item in self._require_client().list_courses(year, semester, campus_code, college_code, department_code)
         ]
 
     def collect_courses(
@@ -178,35 +178,35 @@ class YonseiService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 
         campuses = [campus for campus in self.get_campuses(year=year, semester=semester) if campus_code in {None, campus.code}]
         for campus in campuses:
-            universities = [
+            colleges = [
                 univ
-                for univ in self.get_universities(campus.code, year=year, semester=semester)
-                if univ_code in {None, univ.code}
+                for univ in self.get_colleges(campus.code, year=year, semester=semester)
+                if college_code in {None, univ.code}
             ]
-            for university in universities:
-                faculties = [
-                    faculty
-                    for faculty in self.get_faculties(campus.code, university.code, year=year, semester=semester)
-                    if faculty_code in {None, faculty.code}
+            for college in colleges:
+                departments = [
+                    department
+                    for department in self.get_departments(campus.code, college.code, year=year, semester=semester)
+                    if department_code in {None, department.code}
                 ]
-                for faculty in faculties:
-                    payload = self._require_client().list_courses(year, semester, campus.code, university.code, faculty.code)
+                for department in departments:
+                    payload = self._require_client().list_courses(year, semester, campus.code, college.code, department.code)
                     raw_payloads.append(
                         RawPayloadDump(
                             provider="yonsei",
                             year=year,
                             semester=semester,
                             campus_code=campus.code,
-                            university_code=university.code,
-                            faculty_code=faculty.code,
+                            college_code=college.code,
+                            department_code=department.code,
                             payload=payload,
                         )
                     )
@@ -218,10 +218,10 @@ class YonseiService:
                                 semester=semester,
                                 campus_code=campus.code,
                                 campus_name=campus.name,
-                                university_code=university.code,
-                                university_name=university.name,
-                                faculty_code=faculty.code,
-                                faculty_name=faculty.name,
+                                college_code=college.code,
+                                college_name=college.name,
+                                department_code=department.code,
+                                department_name=department.name,
                             )
                         )
         return courses, raw_payloads

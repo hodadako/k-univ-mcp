@@ -59,28 +59,28 @@ class AppSettings:
     )
     inha_timeout: int = 30
     inha_sleep_seconds: float = 0.5
-<<<<<<< feature/sungshin-3693620942691553377
     sungshin_timeout: int = 30
     sungshin_sleep_seconds: float = 0.5
-=======
     hanyang_cookie: str | None = None
     hanyang_timeout: int = 30
     hanyang_sleep_seconds: float = 0.2
     hanyang_pgm_id: str = "P310278"
     hanyang_menu_id: str = "M006631"
     hanyang_tk: str = ""
->>>>>>> main
 
     @classmethod
     def from_env(cls, *, load_env: bool = True) -> "AppSettings":
         if load_env:
             _ = load_dotenv()
+
         raw_transport = os.getenv("K_UNIV_MCP_TRANSPORT", "stdio")
         if raw_transport not in {"stdio", "sse", "streamable-http"}:
             raise ValueError("K_UNIV_MCP_TRANSPORT must be one of: stdio, sse, streamable-http.")
+
         raw_browser = os.getenv("BROWSER", "headless")
         if raw_browser not in {"headless", "headed"}:
             raise ValueError("BROWSER must be one of: headless, headed.")
+
         return cls(
             yonsei_cookie=os.getenv("YONSEI_COOKIE"),
             yonsei_referer=os.getenv(
@@ -133,15 +133,12 @@ class AppSettings:
             ),
             inha_timeout=int(os.getenv("INHA_TIMEOUT", "30")),
             inha_sleep_seconds=float(os.getenv("INHA_SLEEP_SECONDS", "0.5")),
-<<<<<<< feature/sungshin-3693620942691553377
             sungshin_timeout=int(os.getenv("SUNGSHIN_TIMEOUT", "30")),
             sungshin_sleep_seconds=float(os.getenv("SUNGSHIN_SLEEP_SECONDS", "0.5")),
-=======
             hanyang_cookie=os.getenv("HANYANG_COOKIE"),
             hanyang_timeout=int(os.getenv("HANYANG_TIMEOUT", "30")),
             hanyang_sleep_seconds=float(os.getenv("HANYANG_SLEEP_SECONDS", "0.2")),
             hanyang_pgm_id=os.getenv("HANYANG_PGM_ID", "P310278"),
             hanyang_menu_id=os.getenv("HANYANG_MENU_ID", "M006631"),
             hanyang_tk=os.getenv("HANYANG_TK", ""),
->>>>>>> main
         )

@@ -15,14 +15,14 @@ class FakeClient:
             return ([{"YEAR": "2026", "TERM_CD": "10"}], [{"DPT_CD": "COL01", "LABEL": "AI대학"}])
         return ([{"YEAR": "2026", "TERM_CD": "10"}], [{"DPT_CD": "MED01", "LABEL": "의과대학"}])
 
-    def list_faculties(self, year: str, semester: str, group_type: str, univ_code: str):
-        self.faculty_calls.append((year, semester, group_type, univ_code))
+    def list_faculties(self, year: str, semester: str, group_type: str, college_code: str):
+        self.faculty_calls.append((year, semester, group_type, college_code))
         if group_type == "20":
             return [{"DPT_CD": "D001", "LABEL": "컴퓨터공학과"}]
         return [{"DPT_CD": "M001", "LABEL": "의예과"}]
 
-    def list_courses(self, year: str, semester: str, group_type: str, univ_code: str, faculty_code: str):
-        self.course_calls.append((year, semester, group_type, univ_code, faculty_code))
+    def list_courses(self, year: str, semester: str, group_type: str, college_code: str, department_code: str):
+        self.course_calls.append((year, semester, group_type, college_code, department_code))
         return [
             {
                 "HAKSU_NO": "CSE101" if group_type == "20" else "MED101",
@@ -65,7 +65,7 @@ def test_service_rejects_unknown_campus_code() -> None:
     service = GachonService(client=FakeClient())
 
     try:
-        service.get_universities("other", year="2026", semester="10")
+        service.get_colleges("other", year="2026", semester="10")
     except ValueError as exc:
         assert "Unsupported Gachon campus code" in str(exc)
     else:

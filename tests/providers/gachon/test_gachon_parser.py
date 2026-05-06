@@ -28,10 +28,10 @@ def test_build_course_maps_gachon_fields() -> None:
         semester="10",
         campus_code="gachon",
         campus_name="가천대학교",
-        university_code="COL01",
-        university_name="AI대학",
-        faculty_code="D001",
-        faculty_name="컴퓨터공학과",
+        college_code="COL01",
+        college_name="AI대학",
+        department_code="D001",
+        department_name="컴퓨터공학과",
     )
 
     assert course.provider == "gachon"

@@ -183,10 +183,10 @@ class GachonClient:
     def list_universities(self, group_type: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         payload = self.load_initial_data(group_type)
         years = _first_list_value(payload, "yearHakgi")
-        universities = _first_list_value(payload, "cbUnivCD")
-        return years, universities
+        colleges = _first_list_value(payload, "cbUnivCD")
+        return years, colleges
 
-    def list_faculties(self, year: str, semester: str, group_type: str, univ_code: str) -> list[dict[str, Any]]:
+    def list_faculties(self, year: str, semester: str, group_type: str, college_code: str) -> list[dict[str, Any]]:
         payload = self._post(
             DEPT_LIST_PATH,
             self.common_form_prefix()
@@ -194,7 +194,7 @@ class GachonClient:
                 "@d1#groupType": group_type,
                 "@d1#searchYear": year,
                 "@d1#searchTerm": semester,
-                "@d1#searchUnivCD": univ_code,
+                "@d1#searchUnivCD": college_code,
                 "@d1#searchDeptCD": "",
                 "@d1#searchIsuCD": "001",
                 "@d1#searchGrade": "",
@@ -203,7 +203,7 @@ class GachonClient:
         )
         return _first_list_value(payload, "cbDeptCD")
 
-    def list_courses(self, year: str, semester: str, group_type: str, univ_code: str, faculty_code: str) -> list[dict[str, Any]]:
+    def list_courses(self, year: str, semester: str, group_type: str, college_code: str, department_code: str) -> list[dict[str, Any]]:
         payload = self._post(
             MAIN_SEARCH_PATH,
             self.common_form_prefix()
@@ -211,8 +211,8 @@ class GachonClient:
                 "@d1#groupType": group_type,
                 "@d1#searchYear": year,
                 "@d1#searchTerm": semester,
-                "@d1#searchUnivCD": univ_code,
-                "@d1#searchDeptCD": faculty_code,
+                "@d1#searchUnivCD": college_code,
+                "@d1#searchDeptCD": department_code,
                 "@d1#searchIsuCD": "001",
                 "@d1#searchGrade": "",
                 "@d1#searchSubjectNm": "",

@@ -21,10 +21,10 @@ class FakeClient:
     def list_universities(self, year: str, semester: str, campus_code: str):
         return [{"deptCd": "s1103", "deptNm": "이과대학", "engDeptNm": "College of Science"}]
 
-    def list_faculties(self, year: str, semester: str, campus_code: str, univ_code: str):
+    def list_faculties(self, year: str, semester: str, campus_code: str, college_code: str):
         return [{"deptCd": "0301", "deptNm": "수학전공", "engDeptNm": "Mathematics", "sysinstDivCd": "H1"}]
 
-    def list_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str):
+    def list_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str):
         return [
             {
                 "subjtnb": "MATH1001",
@@ -45,16 +45,16 @@ class RecordingClient(FakeClient):
         return super().list_campuses(year, semester)
 
     def list_universities(self, year: str, semester: str, campus_code: str):
-        self.calls.append(("universities", year, semester, campus_code))
+        self.calls.append(("colleges", year, semester, campus_code))
         return super().list_universities(year, semester, campus_code)
 
-    def list_faculties(self, year: str, semester: str, campus_code: str, univ_code: str):
-        self.calls.append(("faculties", year, semester, campus_code, univ_code))
-        return super().list_faculties(year, semester, campus_code, univ_code)
+    def list_faculties(self, year: str, semester: str, campus_code: str, college_code: str):
+        self.calls.append(("departments", year, semester, campus_code, college_code))
+        return super().list_faculties(year, semester, campus_code, college_code)
 
-    def list_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str):
-        self.calls.append(("courses", year, semester, campus_code, univ_code, faculty_code))
-        return super().list_courses(year, semester, campus_code, univ_code, faculty_code)
+    def list_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str):
+        self.calls.append(("courses", year, semester, campus_code, college_code, department_code))
+        return super().list_courses(year, semester, campus_code, college_code, department_code)
 
 
 @dataclass
@@ -63,14 +63,14 @@ class FallbackClient(FakeClient):
         raise YonseiTransportError("live campuses unavailable")
 
     def list_universities(self, year: str, semester: str, campus_code: str):
-        raise YonseiTransportError("live universities unavailable")
+        raise YonseiTransportError("live colleges unavailable")
 
 
 def test_service_requires_explicit_term_for_faculties() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
 
     try:
-        service.get_faculties("s1", "s1103", year="", semester="10")
+        service.get_departments("s1", "s1103", year="", semester="10")
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
@@ -79,8 +79,8 @@ def test_service_requires_explicit_term_for_faculties() -> None:
 
 def test_service_uses_explicit_term_for_faculties() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
-    faculties = service.get_faculties("s1", "s1103", year="2026", semester="10")
-    assert faculties[0].code == "0301"
+    departments = service.get_departments("s1", "s1103", year="2026", semester="10")
+    assert departments[0].code == "0301"
 
 
 def test_get_campuses_prefers_live_discovery() -> None:
@@ -95,10 +95,10 @@ def test_get_campuses_prefers_live_discovery() -> None:
 def test_get_universities_prefers_live_discovery() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
 
-    universities = service.get_universities("s1", year="2026", semester="10")
+    colleges = service.get_colleges("s1", year="2026", semester="10")
 
-    assert [university.code for university in universities] == ["s1103"]
-    assert universities[0].name == "이과대학"
+    assert [college.code for college in colleges] == ["s1103"]
+    assert colleges[0].name == "이과대학"
 
 
 def test_get_campuses_falls_back_to_seed_when_live_discovery_fails() -> None:
@@ -113,10 +113,10 @@ def test_get_campuses_falls_back_to_seed_when_live_discovery_fails() -> None:
 def test_get_universities_falls_back_to_seed_when_live_discovery_fails() -> None:
     service = YonseiService(None, YonseiSeedCatalog())
 
-    universities = service.get_universities("s1", year="2026", semester="10")
+    colleges = service.get_colleges("s1", year="2026", semester="10")
 
-    assert len(universities) >= 1
-    assert any(university.code == "s1103" for university in universities)
+    assert len(colleges) >= 1
+    assert any(college.code == "s1103" for college in colleges)
 
 
 def test_get_campuses_requires_explicit_term_even_for_seed_fallback() -> None:
@@ -134,11 +134,11 @@ def test_get_universities_requires_explicit_term_even_for_seed_fallback() -> Non
     service = YonseiService(None, YonseiSeedCatalog())
 
     try:
-        service.get_universities("s1", year="2026", semester="")
+        service.get_colleges("s1", year="2026", semester="")
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
-        raise AssertionError("Expected explicit term validation for seeded universities.")
+        raise AssertionError("Expected explicit term validation for seeded colleges.")
 
 
 def test_get_campuses_surfaces_live_discovery_failure_when_client_exists() -> None:
@@ -156,16 +156,16 @@ def test_get_universities_surfaces_live_discovery_failure_when_client_exists() -
     service = YonseiService(FallbackClient(), YonseiSeedCatalog())
 
     try:
-        service.get_universities("s1", year="2026", semester="10")
+        service.get_colleges("s1", year="2026", semester="10")
     except YonseiTransportError as exc:
-        assert "live universities unavailable" in str(exc)
+        assert "live colleges unavailable" in str(exc)
     else:
-        raise AssertionError("Expected live university discovery failure to surface when a client is configured.")
+        raise AssertionError("Expected live college discovery failure to surface when a client is configured.")
 
 
 def test_collect_courses_builds_domain_objects() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
-    courses, raw_payloads = service.collect_courses(year="2026", semester="10", campus_code="s1", univ_code="s1103")
+    courses, raw_payloads = service.collect_courses(year="2026", semester="10", campus_code="s1", college_code="s1103")
     assert len(courses) == 1
     assert courses[0].title == "미적분학"
     assert len(raw_payloads) == 1
@@ -181,8 +181,8 @@ def test_collect_courses_uses_live_discovery_by_default() -> None:
     assert len(raw_payloads) == 1
     assert client.calls == [
         ("campuses", "2026", "10"),
-        ("universities", "2026", "10", "s1"),
-        ("faculties", "2026", "10", "s1", "s1103"),
+        ("colleges", "2026", "10", "s1"),
+        ("departments", "2026", "10", "s1", "s1103"),
         ("courses", "2026", "10", "s1", "s1103", "0301"),
     ]
 

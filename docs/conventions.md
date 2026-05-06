@@ -14,7 +14,6 @@
 - 코드값과 표시명은 구분한다.
 - 학교 원문 payload는 최대한 보존하고, 정규화 결과는 별도 필드에 담는다.
 - 학교의 영어 이름은 약어를 쓰지 않는다.
-- 학교의 영어 이름은 약어를 쓰지 않는다. 
   - `ssu` -> X `soongsil` -> O
 
 ### Campus
@@ -25,29 +24,29 @@
 - `Campus.raw`에는 campus를 구성한 원문 payload를 넣는다.
 - 같은 학교에서 campus 구분이 사실상 하나뿐이어도, 이후 확장을 위해 code를 생략하지 않는다.
 
-### University
+### College
 
-- `University`는 campus 아래의 단과대/college 또는 그에 준하는 상위 학사 조직을 표현한다.
-- `University.campus_code`는 반드시 상위 `Campus.code`와 연결되어야 한다.
-- `University.code`는 해당 campus 범위 안에서 안정적인 식별자여야 한다.
-- `University.name`은 사용자 노출 기준 대표 이름이다.
-- 학교마다 "college", "division", "school" 같은 용어 차이가 있어도 공통 모델에서는 `University`에 매핑한다.
-- `University.raw`에는 원문 조직 데이터 전체를 보존한다.
+- `College`는 campus 아래의 단과대/college 또는 그에 준하는 상위 학사 조직을 표현한다.
+- `College.campus_code`는 반드시 상위 `Campus.code`와 연결되어야 한다.
+- `College.code`는 해당 campus 범위 안에서 안정적인 식별자여야 한다.
+- `College.name`은 사용자 노출 기준 대표 이름이다.
+- 학교마다 "college", "division", "school" 같은 용어 차이가 있어도 공통 모델에서는 `College`에 매핑한다.
+- `College.raw`에는 원문 조직 데이터 전체를 보존한다.
 
-### Faculty
+### Department
 
-- `Faculty`는 강좌 조회의 실제 하위 조직 단위다.
-- `Faculty.campus_code`와 `Faculty.university_code`는 반드시 상위 조직과 일관되어야 한다.
-- `Faculty.code`는 course 조회 요청에 직접 사용하는 식별자를 우선한다.
-- `Faculty.name`은 사용자에게 보여줄 대표 이름이다.
-- 학교에 따라 학과, 전공, 프로그램, 학부전공처럼 표현이 달라도 공통 모델에서는 `Faculty`로 맞춘다.
+- `Department`는 강좌 조회의 실제 하위 조직 단위다.
+- `Department.campus_code`와 `Department.college_code`는 반드시 상위 조직과 일관되어야 한다.
+- `Department.code`는 course 조회 요청에 직접 사용하는 식별자를 우선한다.
+- `Department.name`은 사용자에게 보여줄 대표 이름이다.
+- 학교에 따라 학과, 전공, 프로그램, 학부전공처럼 표현이 달라도 공통 모델에서는 `Department`로 맞춘다.
 - 단순 표시용 이름과 실제 조회용 코드가 다르면, 조회용 코드를 `code`에 넣고 다른 값은 `raw`에 남긴다.
 
 ### Course
 
 - `Course`는 최종 export와 MCP 응답의 기준 모델이다.
-- `provider`, `year`, `semester`, `campus_code`, `university_code`, `faculty_code`는 가능한 한 항상 채운다.
-- `campus_name`, `university_name`, `faculty_name`은 각각 상위 조직의 사용자 노출 이름과 일치시킨다.
+- `provider`, `year`, `semester`, `campus_code`, `college_code`, `department_code`는 가능한 한 항상 채운다.
+- `campus_name`, `college_name`, `department_name`은 각각 상위 조직의 사용자 노출 이름과 일치시킨다.
 - `course_code`는 학교가 제공하는 공식 과목번호를 우선한다.
 - `section`은 분반 값만 넣고, 과목번호와 합쳐진 문자열 전체를 중복 저장하지 않는다.
 - `course_key`는 학교 내부 고유 키가 따로 있을 때만 사용한다.
@@ -72,7 +71,7 @@
 ### RawPayloadDump
 
 - `RawPayloadDump`는 export 시 원문 응답을 파일로 보존하기 위한 모델이다.
-- `provider`, `year`, `semester`, `campus_code`, `university_code`, `faculty_code`는 어떤 조회 범위의 raw인지 설명하는 메타데이터다.
+- `provider`, `year`, `semester`, `campus_code`, `college_code`, `department_code`는 어떤 조회 범위의 raw인지 설명하는 메타데이터다.
 - `payload`는 가공 전 학교 응답 row 목록을 넣는다.
 - 정규화된 `Course.raw`와 `RawPayloadDump.payload`는 목적이 다르다.
 - `Course.raw`는 개별 강좌 row 기준 원문 보존이다.

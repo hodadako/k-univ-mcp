@@ -76,15 +76,15 @@ class FakeClient:
             ]
         }
 
-    def list_courses(self, year: str, semester: str, campus_code: str, univ_code: str, faculty_code: str):
-        self.course_calls.append((year, semester, campus_code, univ_code, faculty_code))
+    def list_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str):
+        self.course_calls.append((year, semester, campus_code, college_code, department_code))
         return [
             {
                 "SBJ_NO": "COR101",
                 "DVCLS": "01",
                 "SBJ_NM": "기초수학",
                 "TMTBL_KOR_DSC": "화 4교시",
-                "OPEN_DPTMJR_CD": faculty_code,
+                "OPEN_DPTMJR_CD": department_code,
                 "DPT_NM": "광고홍보학과",
             }
         ]
@@ -120,8 +120,8 @@ def test_catalog_builds_campus_university_and_faculty_rows() -> None:
 
     assert [campus.code for campus in catalog.campuses] == ["CM030.10"]
     assert catalog.campuses[0].name == "서울"
-    assert [university.code for university in catalog.universities] == ["DS0304"]
-    assert [faculty.code for faculty in catalog.faculties] == ["DS030412"]
+    assert [college.code for college in catalog.colleges] == ["DS0304"]
+    assert [department.code for department in catalog.departments] == ["DS030412"]
 
 
 def test_service_caches_load_payload_and_collects_courses() -> None:
@@ -132,13 +132,13 @@ def test_service_caches_load_payload_and_collects_courses() -> None:
     service = DonggukService(clients)
 
     campuses = service.get_campuses(year="2026", semester="CM160.10")
-    universities = service.get_universities("CM030.10", year="2026", semester="CM160.10")
-    faculties = service.get_faculties("CM030.10", "DS0304", year="2026", semester="CM160.10")
+    colleges = service.get_colleges("CM030.10", year="2026", semester="CM160.10")
+    departments = service.get_departments("CM030.10", "DS0304", year="2026", semester="CM160.10")
     courses, raw_payloads = service.collect_courses(year="2026", semester="CM160.10")
 
     assert campuses[0].code == "CM030.10"
-    assert universities[0].code == "DS0304"
-    assert faculties[0].code == "DS030412"
+    assert colleges[0].code == "DS0304"
+    assert departments[0].code == "DS030412"
     assert len(courses) == 2
     assert len(raw_payloads) == 2
     assert clients["CM030.10"].load_calls == 1
@@ -167,7 +167,7 @@ def test_service_rejects_unavailable_semester_from_doload() -> None:
     service = DonggukService({"CM030.10": FakeClient(campus_code="CM030.10")})
 
     try:
-        service.get_universities("CM030.10", year="2026", semester="3학기")
+        service.get_colleges("CM030.10", year="2026", semester="3학기")
     except ValueError as exc:
         message = str(exc)
         assert "Available semesters from doLoad.do" in message
@@ -188,7 +188,7 @@ def test_iter_course_batches_yields_per_faculty_batches() -> None:
 
     assert len(batches) == 2
     assert [len(courses) for courses, _ in batches] == [1, 1]
-    assert [raw_payloads[0].faculty_code for _, raw_payloads in batches] == ["DS030412", "DK010101"]
+    assert [raw_payloads[0].department_code for _, raw_payloads in batches] == ["DS030412", "DK010101"]
 
 
 def test_iter_course_batches_can_select_a_batch_slice() -> None:
@@ -201,7 +201,7 @@ def test_iter_course_batches_can_select_a_batch_slice() -> None:
     batches = list(service.iter_course_batches(year="2026", semester="CM160.10", batch_index=1, batch_size=1))
 
     assert len(batches) == 1
-    assert batches[0][1][0].faculty_code == "DK010101"
+    assert batches[0][1][0].department_code == "DK010101"
 
 
 def test_get_campuses_returns_static_seoul_and_wise() -> None:
@@ -218,11 +218,11 @@ def test_service_filters_wise_catalog_by_selected_campus() -> None:
         "CM030.21": FakeClient(campus_code="CM030.21"),
     })
 
-    universities = service.get_universities("CM030.21", year="2026", semester="CM160.10")
-    faculties = service.get_faculties("CM030.21", "DK0101", year="2026", semester="CM160.10")
+    colleges = service.get_colleges("CM030.21", year="2026", semester="CM160.10")
+    departments = service.get_departments("CM030.21", "DK0101", year="2026", semester="CM160.10")
 
-    assert [university.code for university in universities] == ["DK0101"]
-    assert [faculty.code for faculty in faculties] == ["DK010101"]
+    assert [college.code for college in colleges] == ["DK0101"]
+    assert [department.code for department in departments] == ["DK010101"]
 
 
 def test_create_service_can_attach_browser_bootstrap(monkeypatch) -> None:
@@ -312,7 +312,7 @@ def test_export_dongguk_courses_runs_all_batches_and_merges(monkeypatch) -> None
 
     def fake_export_course_batches(course_batches, outdir, stem):
         batches = list(course_batches)
-        exported_batches.append((str(outdir), [raw_payloads[0].faculty_code for _, raw_payloads in batches]))
+        exported_batches.append((str(outdir), [raw_payloads[0].department_code for _, raw_payloads in batches]))
         return ({"jsonl": f"{outdir}/{stem}.jsonl"}, sum(len(courses) for courses, _ in batches))
 
     def fake_merge_exported_batches(batch_dirs, outdir, stem):

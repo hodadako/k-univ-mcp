@@ -275,10 +275,10 @@ class YonseiClient:
     def _validate_faculties_payload(self, payload: dict[str, Any]) -> None:
         raw_faculties = payload.get("dsFaclyCd", [])
         if not isinstance(raw_faculties, list):
-            raise YonseiUnexpectedResponseError("Yonsei faculty response did not include a list in dsFaclyCd.")
+            raise YonseiUnexpectedResponseError("Yonsei department response did not include a list in dsFaclyCd.")
         if self._is_suspicious_empty_faculty_payload(payload):
             raise YonseiAuthenticationError(
-                "Yonsei faculty response returned an abnormal empty payload. Session may be expired or blocked by NetFunnel."
+                "Yonsei department response returned an abnormal empty payload. Session may be expired or blocked by NetFunnel."
             )
 
     @staticmethod
@@ -302,7 +302,7 @@ class YonseiClient:
         )
         return self._extract_list(payload, "dsUnivCd")
 
-    def list_faculties(self, year: str, semester: str, campus_code: str, univ_code: str) -> list[dict[str, Any]]:
+    def list_faculties(self, year: str, semester: str, campus_code: str, college_code: str) -> list[dict[str, Any]]:
         payload = self._post(
             FACULTIES_PATH,
             self.common_form_prefix()
@@ -310,7 +310,7 @@ class YonseiClient:
                 "@d1#syy": year,
                 "@d1#smtDivCd": semester,
                 "@d1#campsBusnsCd": campus_code,
-                "@d1#univCd": univ_code,
+                "@d1#univCd": college_code,
             },
             payload_validator=self._validate_faculties_payload,
         )
@@ -321,8 +321,8 @@ class YonseiClient:
         year: str,
         semester: str,
         campus_code: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[dict[str, Any]]:
         payload = self._post(
             COURSES_PATH,
@@ -331,8 +331,8 @@ class YonseiClient:
                 "@d1#syy": year,
                 "@d1#smtDivCd": semester,
                 "@d1#campsBusnsCd": campus_code,
-                "@d1#univCd": univ_code,
-                "@d1#faclyCd": faculty_code,
+                "@d1#univCd": college_code,
+                "@d1#faclyCd": department_code,
                 "@d1#hy": "",
                 "@d1#cdt": "%",
                 "@d1#kwdDivCd": "1",

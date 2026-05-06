@@ -2,34 +2,34 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from k_univ_mcp.models import Campus, Course, Faculty, University
+from k_univ_mcp.models import Campus, Course, Department, College
 
 
 class CourseProvider(Protocol):
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]: ...
 
-    def get_universities(
+    def get_colleges(
         self,
         campus_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[University]: ...
+    ) -> list[College]: ...
 
-    def get_faculties(
+    def get_departments(
         self,
         campus_code: str,
-        univ_code: str,
+        college_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[Faculty]: ...
+    ) -> list[Department]: ...
 
     def get_courses(
         self,
         year: str,
         semester: str,
         campus_code: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[Course]: ...

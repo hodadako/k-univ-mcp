@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
+from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.hanyang.client import HanyangClient
 from k_univ_mcp.providers.hanyang.models import HanyangCourseRow
 from k_univ_mcp.providers.hanyang.parser import build_course
@@ -24,14 +24,14 @@ class HanyangService:
             Campus(code="H0002263", name="대학(학부/ERICA)", raw={"code": "H0002263"}),
         ]
 
-    def get_universities(
+    def get_colleges(
         self,
         campus_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[University]:
-        # Attempt to list programs (universities/departments)
+    ) -> list[College]:
+        # Attempt to list programs (colleges/departments)
         try:
             payload = self.client.list_programs(
                 year=year,
@@ -50,12 +50,12 @@ class HanyangService:
                     break
 
             if not data_list:
-                return [University(campus_code=campus_code, code=campus_code, name="전체", raw={})]
+                return [College(campus_code=campus_code, code=campus_code, name="전체", raw={})]
 
-            # Map pgmNm/pgmCd to University
+            # Map pgmNm/pgmCd to College
             # Note: Hanyang's hierarchy is a bit flat in findPgmList
             return [
-                University(
+                College(
                     campus_code=campus_code,
                     code=item.get("pgmCd") or campus_code,
                     name=item.get("pgmNm") or "전체",
@@ -64,24 +64,24 @@ class HanyangService:
                 for item in data_list
             ]
         except Exception:
-            return [University(campus_code=campus_code, code=campus_code, name="전체", raw={})]
+            return [College(campus_code=campus_code, code=campus_code, name="전체", raw={})]
 
-    def get_faculties(
+    def get_departments(
         self,
         campus_code: str,
-        univ_code: str,
+        college_code: str,
         *,
         year: str,
         semester: str,
-    ) -> list[Faculty]:
+    ) -> list[Department]:
         # Hanyang's hierarchy is relatively flat in the search UI
         return [
-            Faculty(
+            Department(
                 campus_code=campus_code,
-                university_code=univ_code,
-                code=univ_code,
+                college_code=college_code,
+                code=college_code,
                 name="전체",
-                raw={"code": univ_code},
+                raw={"code": college_code},
             )
         ]
 
@@ -90,8 +90,8 @@ class HanyangService:
         year: str,
         semester: str,
         campus_code: str,
-        univ_code: str,
-        faculty_code: str,
+        college_code: str,
+        department_code: str,
     ) -> list[Course]:
         # In Hanyang, we mostly use campus_code (org_code)
         payload = self.client.find_courses(
@@ -120,11 +120,11 @@ class HanyangService:
             for item in rows
         ]
 
-        if univ_code and univ_code != campus_code:
-            courses = [c for c in courses if c.university_code == univ_code]
+        if college_code and college_code != campus_code:
+            courses = [c for c in courses if c.college_code == college_code]
 
-        if faculty_code and faculty_code != campus_code:
-            courses = [c for c in courses if c.faculty_code == faculty_code]
+        if department_code and department_code != campus_code:
+            courses = [c for c in courses if c.department_code == department_code]
 
         return courses
 
@@ -134,8 +134,8 @@ class HanyangService:
         year: str,
         semester: str,
         campus_code: str | None = None,
-        univ_code: str | None = None,
-        faculty_code: str | None = None,
+        college_code: str | None = None,
+        department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
@@ -163,8 +163,8 @@ class HanyangService:
                     year=year,
                     semester=semester,
                     campus_code=campus.code,
-                    university_code=campus.code,
-                    faculty_code=campus.code,
+                    college_code=campus.code,
+                    department_code=campus.code,
                     payload=data_list,
                 )
             )
@@ -179,9 +179,9 @@ class HanyangService:
                 )
 
                 # Apply filters if provided
-                if univ_code and univ_code != campus.code and course.university_code != univ_code:
+                if college_code and college_code != campus.code and course.college_code != college_code:
                     continue
-                if faculty_code and faculty_code != campus.code and course.faculty_code != faculty_code:
+                if department_code and department_code != campus.code and course.department_code != department_code:
                     continue
 
                 courses.append(course)

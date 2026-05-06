@@ -20,10 +20,10 @@ def _course_from_dict(payload: dict[str, Any]) -> Course:
         term_name=payload.get("term_name"),
         campus_code=payload["campus_code"],
         campus_name=payload.get("campus_name"),
-        university_code=payload["university_code"],
-        university_name=payload.get("university_name"),
-        faculty_code=payload["faculty_code"],
-        faculty_name=payload.get("faculty_name"),
+        college_code=payload["college_code"],
+        college_name=payload.get("college_name"),
+        department_code=payload["department_code"],
+        department_name=payload.get("department_name"),
         course_code=payload.get("course_code"),
         section=payload.get("section"),
         course_key=payload.get("course_key"),
@@ -53,14 +53,14 @@ def _course_from_dict(payload: dict[str, Any]) -> Course:
 
 
 def _raw_payload_from_file(raw_path: Path) -> RawPayloadDump:
-    provider, year, semester, campus_code, university_code, faculty_code = raw_path.stem.split("_", 5)
+    provider, year, semester, campus_code, college_code, department_code = raw_path.stem.split("_", 5)
     return RawPayloadDump(
         provider=provider,
         year=year,
         semester=semester,
         campus_code=campus_code,
-        university_code=university_code,
-        faculty_code=faculty_code,
+        college_code=college_code,
+        department_code=department_code,
         payload=json.loads(raw_path.read_text(encoding="utf-8")),
     )
 

@@ -93,14 +93,14 @@ def build_course(
     semester: str,
     campus_code: str,
     campus_name: str | None,
-    university_code: str,
-    university_name: str | None,
-    faculty_code: str,
-    faculty_name: str | None,
+    college_code: str,
+    college_name: str | None,
+    department_code: str,
+    department_name: str | None,
 ) -> Course:
     meeting_slots, parse_warnings = parse_meeting_slots(row.lecture_time_raw)
-    faculty_output_code = row.payload.get("OPEN_DPTMJR_CD") or faculty_code
-    faculty_output_name = row.payload.get("DPT_NM") or faculty_name
+    faculty_output_code = row.payload.get("OPEN_DPTMJR_CD") or department_code
+    faculty_output_name = row.payload.get("DPT_NM") or department_name
     return Course(
         provider="dongguk",
         year=year,
@@ -108,10 +108,10 @@ def build_course(
         term_name=semester_label(semester),
         campus_code=campus_code,
         campus_name=campus_name,
-        university_code=university_code,
-        university_name=university_name,
-        faculty_code=str(faculty_output_code),
-        faculty_name=faculty_output_name,
+        college_code=college_code,
+        college_name=college_name,
+        department_code=str(faculty_output_code),
+        department_name=faculty_output_name,
         course_code=row.course_code,
         section=row.section,
         course_key=f"{row.course_code}-{row.section}" if row.course_code and row.section else None,
@@ -132,8 +132,8 @@ def build_course(
         evaluation_method_name=row.payload.get("RECOD_EVAL_METH_CD"),
         cancelled=None,
         cancelled_label=None,
-        established_department_code=str(row.payload.get("OPEN_DPTMJR_CD") or faculty_code),
-        established_department_name=row.payload.get("DPT_NM") or faculty_name,
+        established_department_code=str(row.payload.get("OPEN_DPTMJR_CD") or department_code),
+        established_department_name=row.payload.get("DPT_NM") or department_name,
         meeting_slots=meeting_slots,
         parse_warnings=parse_warnings,
         raw=row.payload,

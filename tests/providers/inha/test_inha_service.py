@@ -8,8 +8,8 @@ from k_univ_mcp.providers.inha.service import InhaService
 class FakeInhaClient:
     def fetch_departments_from_curriculum(self, year: str | None = None) -> list[dict[str, str]]:
         return [
-            {"code": "0194002", "name": "기계공학과 / 기계공학", "university": "공과대학"},
-            {"code": "1063157", "name": "수학과 / 수학", "university": "자연과학대학"},
+            {"code": "0194002", "name": "기계공학과 / 기계공학", "college": "공과대학"},
+            {"code": "1063157", "name": "수학과 / 수학", "college": "자연과학대학"},
         ]
 
     def fetch_departments(self) -> list[dict[str, str]]:
@@ -18,7 +18,7 @@ class FakeInhaClient:
             {"code": "1063157", "name": "수학과 / 수학"},
         ]
 
-    def fetch_courses(self, faculty_code: str, year: str | None = None, semester: str | None = None) -> list[dict[str, Any]]:
+    def fetch_courses(self, department_code: str, year: str | None = None, semester: str | None = None) -> list[dict[str, Any]]:
         return [
             {
                 "haksu_section": "ME101-001",
@@ -44,16 +44,16 @@ def test_inha_service_returns_campuses() -> None:
 
 def test_inha_service_returns_universities() -> None:
     service = InhaService(client=FakeInhaClient())
-    universities = service.get_universities("yonghyeon", year="2026", semester="1")
-    assert len(universities) == 2
-    assert {u.name for u in universities} == {"공과대학", "자연과학대학"}
+    colleges = service.get_colleges("yonghyeon", year="2026", semester="1")
+    assert len(colleges) == 2
+    assert {u.name for u in colleges} == {"공과대학", "자연과학대학"}
 
 
 def test_inha_service_returns_faculties() -> None:
     service = InhaService(client=FakeInhaClient())
-    faculties = service.get_faculties("yonghyeon", "공과대학", year="2026", semester="1")
-    assert len(faculties) == 1
-    assert faculties[0].name == "기계공학과 / 기계공학"
+    departments = service.get_departments("yonghyeon", "공과대학", year="2026", semester="1")
+    assert len(departments) == 1
+    assert departments[0].name == "기계공학과 / 기계공학"
 
 
 def test_inha_service_returns_courses() -> None:

@@ -17,7 +17,7 @@ class Campus:
 
 
 @dataclass(slots=True)
-class University:
+class College:
     campus_code: str
     code: str
     name: str
@@ -29,9 +29,9 @@ class University:
 
 
 @dataclass(slots=True)
-class Faculty:
+class Department:
     campus_code: str
-    university_code: str
+    college_code: str
     code: str
     name: str
     english_name: str | None = None
@@ -59,10 +59,10 @@ class Course:
     term_name: str | None
     campus_code: str
     campus_name: str | None
-    university_code: str
-    university_name: str | None
-    faculty_code: str
-    faculty_name: str | None
+    college_code: str
+    college_name: str | None
+    department_code: str
+    department_name: str | None
     course_code: str | None
     section: str | None
     course_key: str | None
@@ -101,10 +101,10 @@ class Course:
             "term_name": self.term_name,
             "campus_code": self.campus_code,
             "campus_name": self.campus_name,
-            "university_code": self.university_code,
-            "university_name": self.university_name,
-            "faculty_code": self.faculty_code,
-            "faculty_name": self.faculty_name,
+            "college_code": self.college_code,
+            "college_name": self.college_name,
+            "department_code": self.department_code,
+            "department_name": self.department_name,
             "course_code": self.course_code,
             "section": self.section,
             "course_key": self.course_key,
@@ -139,9 +139,9 @@ class RawPayloadDump:
     year: str
     semester: str
     campus_code: str
-    university_code: str
-    faculty_code: str
+    college_code: str
+    department_code: str
     payload: list[dict[str, Any]]
 
     def file_name(self) -> str:
-        return f"{self.provider}_{self.year}_{self.semester}_{self.campus_code}_{self.university_code}_{self.faculty_code}.json"
+        return f"{self.provider}_{self.year}_{self.semester}_{self.campus_code}_{self.college_code}_{self.department_code}.json"
