@@ -9,17 +9,15 @@
 
 ## 지원 대학
 
-학교별로 수강신청 시스템이 제공하는 학기 코드와 실제 조회 가능한 학기는 다를 수 있습니다. CLI와 MCP의 기본 학기 입력은 모든 학교에서 `1`, `2`, `summer`, `winter`로 통일하고, 내부에서 학교별 raw code로 변환합니다. 기존 raw provider code(`10`, `CM160.10`, `COMM063.10` 등)도 하위 호환을 위해 계속 받을 수 있습니다.
-
-| 대학교 | Provider | 조회 계층 | Export | 학기 입력 형식 | 비고 |
-| --- | --- | --- | --- | --- | --- |
-| 연세대학교 | `yonsei` | 캠퍼스 → College → Department → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | 신촌/미래 지원, 캠퍼스/College 시드 fallback 일부 지원 |
-| 동국대학교 | `dongguk` | 캠퍼스 → College → Department → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | 서울/WISE 지원, browser bootstrap 기반 live 세션 사용 |
-| 가천대학교 | `gachon` | 캠퍼스 → College → Department → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | 글로벌/메디컬 지원, `WMONID` 기반 세션 필요 |
-| 인하대학교 | `inha` | 캠퍼스 → College(단과대학) → Department(학부/과) → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | 용현캠퍼스 지원, ASP.NET PostBack 기반 세션 사용 |
-| 성신여자대학교 | `sungshin` | 캠퍼스 → College → Department → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | 수정/운정캠퍼스 지원, AJAX 기반 JSON API 사용 |
-| 숭실대학교 | `soongsil` | 캠퍼스 → College → Department → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | SAP Web Dynpro 기반, Playwright 자동화 사용 |
-| 한양대학교 | `hanyang` | 캠퍼스 → College → Department → 교과목 | CSV, XLSX, JSON, JSONL, raw JSON archive | `1`, `2`, `summer`, `winter` | 서울/ERICA 지원, `tk` 파라미터 필요 |
+| 대학교 | 지원 캠퍼스 |
+| --- | --- |
+| 연세대학교 | 신촌, 미래 |
+| 동국대학교 | 서울, WISE |
+| 가천대학교 | 글로벌, 메디컬 |
+| 인하대학교 | 용현 |
+| 성신여자대학교 | 수정, 운정 |
+| 숭실대학교 | 숭실 |
+| 한양대학교 | 서울, ERICA |
 
 ## 설치
 
@@ -32,91 +30,11 @@ playwright install chromium
 
 ## CLI 예시
 
-```bash
-python -m k_univ_mcp.cli yonsei campuses --year 2026 --semester 1
-python -m k_univ_mcp.cli yonsei colleges --campus sinchon-undergraduate --year 2026 --semester 1
-python -m k_univ_mcp.cli yonsei departments --campus sinchon-undergraduate --college s1103 --year 2026 --semester 1
-python -m k_univ_mcp.cli yonsei courses --year 2026 --semester 1 --campus sinchon-undergraduate --college s1103 --department 0301
-python -m k_univ_mcp.cli yonsei export --year 2026 --semester 1 --campus sinchon-undergraduate --outdir out
-
-python -m k_univ_mcp.cli dongguk campuses --year 2026 --semester 1
-python -m k_univ_mcp.cli dongguk colleges --campus seoul --year 2026 --semester 1
-python -m k_univ_mcp.cli dongguk departments --campus seoul --college DS0312 --year 2026 --semester 1
-python -m k_univ_mcp.cli dongguk courses --year 2026 --semester 1 --campus seoul --college DS0312 --department DS031201
-python -m k_univ_mcp.cli dongguk export --year 2026 --semester winter --batch-size 20 --outdir out
-
-python -m k_univ_mcp.cli gachon campuses --year 2026 --semester 1
-python -m k_univ_mcp.cli gachon colleges --campus gachon-global --year 2026 --semester 1
-python -m k_univ_mcp.cli gachon departments --campus gachon-global --college COL01 --year 2026 --semester 1
-python -m k_univ_mcp.cli gachon courses --year 2026 --semester 1 --campus gachon-global --college COL01 --department D001
-python -m k_univ_mcp.cli gachon export --year 2026 --semester 2 --campus gachon-global --outdir out
-
-python -m k_univ_mcp.cli inha campuses --year 2026 --semester 1
-python -m k_univ_mcp.cli inha colleges --campus yonghyeon --year 2026 --semester 1
-python -m k_univ_mcp.cli inha departments --campus yonghyeon --college 공과대학 --year 2026 --semester 1
-python -m k_univ_mcp.cli inha courses --year 2026 --semester 1 --campus yonghyeon --college 공과대학 --department 0194002
-python -m k_univ_mcp.cli inha export --year 2026 --semester 2 --campus yonghyeon --college 공과대학 --department 0194002 --outdir out
-
-python -m k_univ_mcp.cli sungshin campuses --year 2025 --semester 1
-python -m k_univ_mcp.cli sungshin colleges --campus sujeong --year 2025 --semester 1
-python -m k_univ_mcp.cli sungshin departments --campus sujeong --college COMM075.101 --year 2025 --semester 1
-python -m k_univ_mcp.cli sungshin courses --year 2025 --semester 1 --campus sujeong --college COMM075.101 --department 2170100
-python -m k_univ_mcp.cli sungshin export --year 2025 --semester 2 --campus sujeong --college COMM075.101 --department 2170100 --outdir out
-
-python -m k_univ_mcp.cli soongsil campuses --year 2026 --semester 1
-python -m k_univ_mcp.cli soongsil colleges --campus soongsil --year 2026 --semester 1
-python -m k_univ_mcp.cli soongsil departments --campus soongsil --college soongsil_all --year 2026 --semester 1
-python -m k_univ_mcp.cli soongsil courses --year 2026 --semester 1 --campus soongsil --college soongsil_all --department soongsil_all
-python -m k_univ_mcp.cli soongsil export --year 2026 --semester 2 --outdir out
-
-python -m k_univ_mcp.cli hanyang campuses --year 2026 --semester 1
-python -m k_univ_mcp.cli hanyang colleges --campus seoul --year 2026 --semester 1
-python -m k_univ_mcp.cli hanyang departments --campus seoul --college seoul --year 2026 --semester 1
-python -m k_univ_mcp.cli hanyang courses --year 2026 --semester summer --campus seoul --college seoul --department seoul
-python -m k_univ_mcp.cli hanyang export --year 2026 --semester winter --campus seoul --outdir out
-```
-
-구버전 CLI 호환을 위해 `universities`/`faculties`, `--univ`, `--faculty`도 별칭으로 계속 받을 수 있지만, 문서와 기본 사용법은 `colleges`/`departments`, `--college`, `--department`를 기준으로 합니다.
-
-export 기본 출력 경로는 `<outdir>/<영문 학교 디렉토리명>/`입니다. 예를 들어 `--outdir out`으로 연세대를 export하면 파일은 `out/yonsei/` 아래에 생성됩니다.
+자세한 사용 예시는 [`docs/cli-examples.md`](docs/cli-examples.md)를 참고하세요.
 
 ## MCP 도구
 
-- `yonsei_get_campuses`
-- `yonsei_get_colleges`
-- `yonsei_get_departments`
-- `yonsei_get_courses`
-- `yonsei_export_courses`
-- `dongguk_get_campuses`
-- `dongguk_get_colleges`
-- `dongguk_get_departments`
-- `dongguk_get_courses`
-- `dongguk_export_courses`
-- `gachon_get_campuses`
-- `gachon_get_colleges`
-- `gachon_get_departments`
-- `gachon_get_courses`
-- `gachon_export_courses`
-- `inha_get_campuses`
-- `inha_get_colleges`
-- `inha_get_departments`
-- `inha_get_courses`
-- `inha_export_courses`
-- `sungshin_get_campuses`
-- `sungshin_get_colleges`
-- `sungshin_get_departments`
-- `sungshin_get_courses`
-- `sungshin_export_courses`
-- `soongsil_get_campuses`
-- `soongsil_get_colleges`
-- `soongsil_get_departments`
-- `soongsil_get_courses`
-- `soongsil_export_courses`
-- `hanyang_get_campuses`
-- `hanyang_get_colleges`
-- `hanyang_get_departments`
-- `hanyang_get_courses`
-- `hanyang_export_courses`
+자세한 도구 목록은 [`docs/mcp-tools.md`](docs/mcp-tools.md)를 참고하세요.
 
 ## MCP 서버 실행
 
@@ -262,10 +180,3 @@ python -m k_univ_mcp.mcp_server
   - `HANYANG_SLEEP_SECONDS`
 
 </details>
-
-## 문서
-
-- [환경 변수 문서](docs/environment-variables.md)
-- [세션 처리 문서](docs/session-handling.md)
-- [데이터 규약](docs/conventions.md)
-- [깃 규칙](docs/git-rules.md)
