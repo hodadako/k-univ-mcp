@@ -121,7 +121,7 @@ def test_apply_cookie_header_replaces_stale_cookies_instead_of_merging() -> None
     assert "OLD_COOKIE" not in cookies
 
 
-def test_list_campuses_uses_live_discovery_endpoint_with_term_scoped_payload() -> None:
+def test_list_campuses_uses_live_discovery_endpoint_with_semester_scoped_payload() -> None:
     session = FakeSession(
         [
             make_response(
@@ -150,7 +150,7 @@ def test_list_campuses_uses_live_discovery_endpoint_with_term_scoped_payload() -
     assert data["@d1#smtDivCd"] == "11"
 
 
-def test_list_universities_uses_live_discovery_endpoint_with_term_and_campus() -> None:
+def test_list_universities_uses_live_discovery_endpoint_with_semester_and_campus() -> None:
     session = FakeSession(
         [
             make_response(

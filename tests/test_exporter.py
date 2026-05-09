@@ -128,7 +128,7 @@ def make_course(*, provider: str, semester: str, course_code: str, title: str, c
         provider=provider,
         year="2026",
         semester=semester,
-        term_name="2026-1학기" if provider == "yonsei" else "1학기",
+        semester_name="2026-1학기" if provider == "yonsei" else "1학기",
         campus_code=campus_code,
         campus_name=campus_name,
         college_code=college_code,

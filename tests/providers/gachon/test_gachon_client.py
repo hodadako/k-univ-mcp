@@ -48,9 +48,9 @@ def test_list_universities_bootstraps_wmonid_and_reads_onload_payload() -> None:
     )
     client = GachonClient(session=cast(requests.Session, cast(object, session)))
 
-    terms, colleges = client.list_universities("20")
+    semesters, colleges = client.list_universities("20")
 
-    assert terms == [{"YEAR": "2026", "TERM_CD": "10"}]
+    assert semesters == [{"YEAR": "2026", "TERM_CD": "10"}]
     assert colleges == [{"DPT_CD": "COL01", "LABEL": "AI대학"}]
     assert session.calls[0][0] == "GET"
     assert session.calls[1][1].endswith(ONLOAD_PATH)

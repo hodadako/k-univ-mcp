@@ -105,7 +105,7 @@ def build_course(
         provider="dongguk",
         year=year,
         semester=semester,
-        term_name=semester_label(semester),
+        semester_name=semester_label(semester),
         campus_code=campus_code,
         campus_name=campus_name,
         college_code=college_code,

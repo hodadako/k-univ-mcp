@@ -57,7 +57,7 @@ class HanyangCourseRow:
         return self.raw.get("jojikGbNm")
 
     @property
-    def isu_term_nm(self) -> str | None:
+    def semester_name(self) -> str | None:
         return self.raw.get("isuTermNm")
 
     @property

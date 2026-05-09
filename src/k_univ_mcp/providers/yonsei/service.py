@@ -71,7 +71,7 @@ class YonseiService:
         return self.client
 
     @staticmethod
-    def _require_term(year: str, semester: str) -> tuple[str, str]:
+    def _require_semester(year: str, semester: str) -> tuple[str, str]:
         if not year or not semester:
             raise ValueError("Year and semester are required and must be passed explicitly.")
         return year, normalize_provider_semester("yonsei", semester)
@@ -122,7 +122,7 @@ class YonseiService:
         ]
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         if self.client is None:
             return self._to_campuses(self.seed_catalog.campuses())
 
@@ -137,7 +137,7 @@ class YonseiService:
         year: str,
         semester: str,
     ) -> list[College]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         public_campus_code = self._public_campus_code(campus_code)
         upstream_campus_code = self._resolve_upstream_campus_code(campus_code)
         if self.client is None:
@@ -159,7 +159,7 @@ class YonseiService:
         year: str,
         semester: str,
     ) -> list[Department]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         public_campus_code = self._public_campus_code(campus_code)
         upstream_campus_code = self._resolve_upstream_campus_code(campus_code)
         departments = self._require_client().list_faculties(
@@ -188,7 +188,7 @@ class YonseiService:
         college_code: str,
         department_code: str,
     ) -> list[Course]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         public_campus_code = self._public_campus_code(campus_code)
         upstream_campus_code = self._resolve_upstream_campus_code(campus_code)
         campus_name = next(
@@ -250,7 +250,7 @@ class YonseiService:
         college_code: str | None = None,
         department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []

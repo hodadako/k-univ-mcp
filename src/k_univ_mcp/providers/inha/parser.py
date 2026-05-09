@@ -55,7 +55,7 @@ def build_course(
         provider="inha",
         year=year,
         semester=semester,
-        term_name=f"{year}학년도 {semester}학기",
+        semester_name=f"{year}학년도 {semester}학기",
         campus_code=campus_code,
         campus_name=campus_name,
         college_code=college_code,

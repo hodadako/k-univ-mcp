@@ -80,7 +80,7 @@ def build_course(
         provider="yonsei",
         year=year,
         semester=semester,
-        term_name=row.payload.get("syySmtDivNm"),
+        semester_name=row.payload.get("syySmtDivNm"),
         campus_code=campus_code,
         campus_name=campus_name,
         college_code=college_code,

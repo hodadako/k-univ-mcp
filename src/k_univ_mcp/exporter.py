@@ -32,7 +32,7 @@ def _course_from_dict(payload: dict[str, Any]) -> Course:
         provider=payload["provider"],
         year=payload["year"],
         semester=payload["semester"],
-        term_name=payload.get("term_name"),
+        semester_name=payload.get("semester_name"),
         campus_code=payload["campus_code"],
         campus_name=payload.get("campus_name"),
         college_code=payload["college_code"],

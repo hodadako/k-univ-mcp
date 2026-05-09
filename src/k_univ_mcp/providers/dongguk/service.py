@@ -298,19 +298,19 @@ class DonggukService:
         return adapter
 
     @staticmethod
-    def _require_term(year: str, semester: str) -> tuple[str, str]:
+    def _require_semester(year: str, semester: str) -> tuple[str, str]:
         if not year or not semester:
             raise ValueError("Year and semester are required and must be passed explicitly.")
         return year, normalize_provider_semester("dongguk", semester)
 
     @staticmethod
-    def _normalize_term_text(value: str | None) -> str:
+    def _normalize_semester_text(value: str | None) -> str:
         if value is None:
             return ""
         return re.sub(r"\s+", "", str(value).strip()).casefold()
 
     @staticmethod
-    def _extract_term_text(row: dict[str, Any], *keys: str) -> str | None:
+    def _extract_semester_text(row: dict[str, Any], *keys: str) -> str | None:
         for key in keys:
             value = row.get(key)
             if value is None:
@@ -322,18 +322,18 @@ class DonggukService:
 
     @classmethod
     def _row_matches_year(cls, row: dict[str, Any], year: str) -> bool:
-        row_year = cls._extract_term_text(row, "OPEN_YY", "YY", "YEAR")
+        row_year = cls._extract_semester_text(row, "OPEN_YY", "YY", "YEAR")
         return row_year in {None, "", year}
 
     @classmethod
     def _semester_candidates(cls, row: dict[str, Any]) -> set[str]:
-        code = cls._extract_term_text(row, "OPEN_SEM_CD", "SEM_CD")
-        label = cls._extract_term_text(row, "OPEN_SEM_NM", "SEM_NM", "CD_NM", "CODE_NM", "NAME", "NM")
+        code = cls._extract_semester_text(row, "OPEN_SEM_CD", "SEM_CD")
+        label = cls._extract_semester_text(row, "OPEN_SEM_NM", "SEM_NM", "CD_NM", "CODE_NM", "NAME", "NM")
 
         candidates: set[str] = set()
 
         def add_candidate(value: str | None) -> None:
-            normalized = cls._normalize_term_text(value)
+            normalized = cls._normalize_semester_text(value)
             if normalized:
                 candidates.add(normalized)
 
@@ -354,7 +354,7 @@ class DonggukService:
         return candidates
 
     def _resolve_semester(self, campus_code: str, year: str, semester: str) -> str:
-        _ = self._require_term(year, semester)
+        _ = self._require_semester(year, semester)
         public_campus_code = self._resolve_public_campus_code(campus_code)
         _ = self._require_adapter(public_campus_code)
 
@@ -363,7 +363,7 @@ class DonggukService:
         if cached is not None:
             return cached
 
-        requested = self._normalize_term_text(semester)
+        requested = self._normalize_semester_text(semester)
         rows = self._require_client(public_campus_code).fetch_semesters()
 
         matching_code: str | None = None
@@ -374,15 +374,15 @@ class DonggukService:
         for row in rows:
             if not self._row_matches_year(row, year):
                 continue
-            code = self._extract_term_text(row, "OPEN_SEM_CD", "SEM_CD")
+            code = self._extract_semester_text(row, "OPEN_SEM_CD", "SEM_CD")
             if not code:
                 continue
             if code not in seen_codes:
                 seen_codes.add(code)
                 available_codes.append(code)
-                label = self._extract_term_text(row, "OPEN_SEM_NM", "SEM_NM", "CD_NM", "CODE_NM", "NAME", "NM") or semester_label(code)
-                if label:
-                    available_labels.append(f"{code} ({label})")
+            label = self._extract_semester_text(row, "OPEN_SEM_NM", "SEM_NM", "CD_NM", "CODE_NM", "NAME", "NM") or semester_label(code)
+            if label:
+                available_labels.append(f"{code} ({label})")
             if requested in self._semester_candidates(row):
                 matching_code = code
                 break
@@ -439,14 +439,14 @@ class DonggukService:
         ]
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
-        self._require_term(year, semester)
+        self._require_semester(year, semester)
         return [
             Campus(code=adapter.public_code, name=adapter.name, raw={"CAMPUS_CD": adapter.code})
             for adapter in DONGGUK_CAMPUS_ADAPTERS.values()
         ]
 
     def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
-        self._require_term(year, semester)
+        self._require_semester(year, semester)
         public_campus_code = self._resolve_public_campus_code(campus_code)
         self._require_adapter(public_campus_code)
         return self._to_universities(public_campus_code, self._catalog(public_campus_code, year, semester).colleges)
@@ -459,7 +459,7 @@ class DonggukService:
         year: str,
         semester: str,
     ) -> list[Department]:
-        self._require_term(year, semester)
+        self._require_semester(year, semester)
         public_campus_code = self._resolve_public_campus_code(campus_code)
         self._require_adapter(public_campus_code)
         return self._to_faculties(public_campus_code, college_code, self._catalog(public_campus_code, year, semester).departments)
@@ -472,7 +472,7 @@ class DonggukService:
         college_code: str,
         department_code: str,
     ) -> list[Course]:
-        self._require_term(year, semester)
+        self._require_semester(year, semester)
         public_campus_code = self._resolve_public_campus_code(campus_code)
         adapter = self._require_adapter(public_campus_code)
         resolved_semester = self._resolve_semester(public_campus_code, year, semester)
@@ -536,7 +536,7 @@ class DonggukService:
         college_code: str | None = None,
         department_code: str | None = None,
     ) -> list[tuple[Campus, College, Department]]:
-        self._require_term(year, semester)
+        self._require_semester(year, semester)
 
         targets: list[tuple[Campus, College, Department]] = []
         campuses = [

@@ -57,7 +57,7 @@ def build_course(
         provider="gachon",
         year=year,
         semester=semester,
-        term_name=row.payload.get("TERM_NM") or semester,
+        semester_name=row.payload.get("TERM_NM") or semester,
         campus_code=campus_code,
         campus_name=campus_name,
         college_code=college_code,

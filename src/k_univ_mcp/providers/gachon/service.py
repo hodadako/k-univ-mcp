@@ -25,7 +25,7 @@ class GachonService:
     _initial_cache: dict[tuple[str, str, str], tuple[list[dict[str, Any]], list[dict[str, Any]]]] = field(default_factory=dict, repr=False)
 
     @staticmethod
-    def _require_term(year: str, semester: str) -> tuple[str, str]:
+    def _require_semester(year: str, semester: str) -> tuple[str, str]:
         if not year or not semester:
             raise ValueError("Year and semester are required and must be passed explicitly.")
         return year, normalize_provider_semester("gachon", semester)
@@ -53,11 +53,11 @@ class GachonService:
         return payload
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
-        self._require_term(year, semester)
+        self._require_semester(year, semester)
         return [Campus(code=code, name=name, raw={"provider": "gachon", "groupType": group_type}) for code, (name, group_type) in GACHON_CAMPUSES.items()]
 
     def get_colleges(self, campus_code: str, *, year: str, semester: str) -> list[College]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         self._require_campus(campus_code)
         _, colleges = self._initial(campus_code, resolved_year, resolved_semester)
         return [
@@ -71,7 +71,7 @@ class GachonService:
         ]
 
     def get_departments(self, campus_code: str, college_code: str, *, year: str, semester: str) -> list[Department]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         self._require_campus(campus_code)
         return [
             Department(
@@ -88,7 +88,7 @@ class GachonService:
         ]
 
     def get_courses(self, year: str, semester: str, campus_code: str, college_code: str, department_code: str) -> list[Course]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         self._require_campus(campus_code)
         college_name = next((item.name for item in self.get_colleges(campus_code, year=resolved_year, semester=resolved_semester) if item.code == college_code), None)
         department_name = next((item.name for item in self.get_departments(campus_code, college_code, year=resolved_year, semester=resolved_semester) if item.code == department_code), None)
@@ -122,7 +122,7 @@ class GachonService:
         college_code: str | None = None,
         department_code: str | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
-        resolved_year, resolved_semester = self._require_term(year, semester)
+        resolved_year, resolved_semester = self._require_semester(year, semester)
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 

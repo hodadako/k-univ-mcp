@@ -18,7 +18,7 @@ def build_course(
         provider="sungshin",
         year=year,
         semester=semester,
-        term_name=row.get("semCd"),
+        semester_name=row.get("semCd"),
         campus_code=campus_code,
         campus_name=campus_name,
         college_code=row.get("orgClsfCd", ""),

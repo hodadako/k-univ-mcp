@@ -56,7 +56,7 @@ class Course:
     provider: str
     year: str
     semester: str
-    term_name: str | None
+    semester_name: str | None
     campus_code: str
     campus_name: str | None
     college_code: str
@@ -98,7 +98,7 @@ class Course:
             "provider": self.provider,
             "year": self.year,
             "semester": self.semester,
-            "term_name": self.term_name,
+            "semester_name": self.semester_name,
             "campus_code": self.campus_code,
             "campus_name": self.campus_name,
             "college_code": self.college_code,

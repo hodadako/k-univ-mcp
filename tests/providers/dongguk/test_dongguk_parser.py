@@ -71,7 +71,7 @@ def test_build_course_maps_core_fields() -> None:
 
     assert course.provider == "dongguk"
     assert course.course_key == "COR101-01"
-    assert course.term_name == "1학기"
+    assert course.semester_name == "1학기"
     assert course.meeting_slots[0].day_code == "TUE"
     assert course.meeting_slots[1].day_code == "TUE"
     assert course.department_code == "DS030412"

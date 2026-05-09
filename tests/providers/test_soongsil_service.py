@@ -101,7 +101,7 @@ def test_soongsil_service_builds_dynamic_universities_faculties_and_courses() ->
     assert [department.code for department in departments] == ["1100000101"]
     assert len(courses) == 2
     assert {course.course_code for course in courses} == {"2150517201", "MATH1001"}
-    assert {course.term_name for course in courses} == {"2026학년도 1학기"}
+    assert {course.semester_name for course in courses} == {"2026학년도 1학기"}
     assert len(raw_payloads) == 2
     assert client.list_calls == [("2026", "1학기")]
     assert client.collect_calls == [("2026", "1학기", [("11000001", "1100000101"), ("12000001", "1200000101")])]
@@ -116,8 +116,8 @@ def test_soongsil_service_can_filter_by_university_or_faculty_code() -> None:
 
     assert [course.course_code for course in by_university] == ["2150517201"]
     assert [course.course_code for course in by_faculty] == ["MATH1001"]
-    assert by_university[0].term_name == "2026학년도 1학기"
-    assert by_faculty[0].term_name == "2026학년도 1학기"
+    assert by_university[0].semester_name == "2026학년도 1학기"
+    assert by_faculty[0].semester_name == "2026학년도 1학기"
 
 
 def test_soongsil_service_normalizes_unified_semester_labels() -> None:

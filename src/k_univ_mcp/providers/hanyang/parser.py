@@ -58,7 +58,7 @@ def build_course(
         provider="hanyang",
         year=year,
         semester=semester,
-        term_name=row.isu_term_nm,
+        semester_name=row.semester_name,
         campus_code=campus_code,
         campus_name=campus_name or row.campus_nm,
         college_code=row.jojik_gb_nm or "",

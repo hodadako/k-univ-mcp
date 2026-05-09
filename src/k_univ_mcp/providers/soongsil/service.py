@@ -92,7 +92,7 @@ class SoongsilService:
     ) -> list[Course]:
         resolved_semester = normalize_provider_semester("soongsil", semester)
         courses: list[Course] = []
-        term_name = self._term_name(year, semester)
+        semester_name = self._semester_name(year, semester)
 
         for entry, html in self._collect_course_pages(year, resolved_semester, college_code, department_code):
             rows = self.parser.parse_courses(html)
@@ -101,7 +101,7 @@ class SoongsilService:
                     provider="soongsil",
                     year=year,
                     semester=resolved_semester,
-                    term_name=term_name,
+                    semester_name=semester_name,
                     campus_code=campus_code,
                     campus_name="숭실대학교",
                     college_code=entry.college_code,
@@ -149,7 +149,7 @@ class SoongsilService:
 
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
-        term_name = self._term_name(year, semester)
+        semester_name = self._semester_name(year, semester)
 
         for entry, html in self._collect_course_pages(year, resolved_semester, selected_univ_code, selected_faculty_code):
             rows = self.parser.parse_courses(html)
@@ -158,7 +158,7 @@ class SoongsilService:
                     provider="soongsil",
                     year=year,
                     semester=resolved_semester,
-                    term_name=term_name,
+                    semester_name=semester_name,
                     campus_code=campus_code,
                     campus_name="숭실대학교",
                     college_code=entry.college_code,
@@ -213,7 +213,7 @@ class SoongsilService:
             self._catalog_cache[key] = self.client.list_catalog(year, semester)
         return self._catalog_cache[key]
 
-    def _term_name(self, year: str, semester: str) -> str:
+    def _semester_name(self, year: str, semester: str) -> str:
         canonical = canonicalize_semester(semester)
         label = CANONICAL_SEMESTER_LABELS.get(canonical)
         if label is not None:

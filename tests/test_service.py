@@ -66,7 +66,7 @@ class FallbackClient(FakeClient):
         raise YonseiTransportError("live colleges unavailable")
 
 
-def test_service_requires_explicit_term_for_faculties() -> None:
+def test_service_requires_explicit_semester_for_faculties() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
 
     try:
@@ -74,10 +74,10 @@ def test_service_requires_explicit_term_for_faculties() -> None:
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
-        raise AssertionError("Expected explicit term validation to reject empty year.")
+        raise AssertionError("Expected explicit semester validation to reject empty year.")
 
 
-def test_service_uses_explicit_term_for_faculties() -> None:
+def test_service_uses_explicit_semester_for_faculties() -> None:
     service = YonseiService(FakeClient(), YonseiSeedCatalog())
     departments = service.get_departments("sinchon-undergraduate", "s1103", year="2026", semester="10")
     assert departments[0].code == "0301"
@@ -120,7 +120,7 @@ def test_get_universities_falls_back_to_seed_when_live_discovery_fails() -> None
     assert any(college.code == "s1103" for college in colleges)
 
 
-def test_get_campuses_requires_explicit_term_even_for_seed_fallback() -> None:
+def test_get_campuses_requires_explicit_semester_even_for_seed_fallback() -> None:
     service = YonseiService(None, YonseiSeedCatalog())
 
     try:
@@ -128,10 +128,10 @@ def test_get_campuses_requires_explicit_term_even_for_seed_fallback() -> None:
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
-        raise AssertionError("Expected explicit term validation for seeded campuses.")
+        raise AssertionError("Expected explicit semester validation for seeded campuses.")
 
 
-def test_get_universities_requires_explicit_term_even_for_seed_fallback() -> None:
+def test_get_universities_requires_explicit_semester_even_for_seed_fallback() -> None:
     service = YonseiService(None, YonseiSeedCatalog())
 
     try:
@@ -139,7 +139,7 @@ def test_get_universities_requires_explicit_term_even_for_seed_fallback() -> Non
     except ValueError as exc:
         assert "must be passed explicitly" in str(exc)
     else:
-        raise AssertionError("Expected explicit term validation for seeded colleges.")
+        raise AssertionError("Expected explicit semester validation for seeded colleges.")
 
 
 def test_get_campuses_surfaces_live_discovery_failure_when_client_exists() -> None:
