@@ -60,8 +60,16 @@ class FakeClient:
         semester: str,
         entries: list[SoongsilCatalogEntry],
     ) -> list[tuple[SoongsilCatalogEntry, str]]:
-        self.collect_calls.append((year, semester, [(entry.college_code, entry.department_code) for entry in entries]))
-        return [(entry, self.html_by_department[entry.department_code]) for entry in entries]
+        self.collect_calls.append(
+            (
+                year,
+                semester,
+                [(entry.college_code, entry.department_code) for entry in entries],
+            )
+        )
+        return [
+            (entry, self.html_by_department[entry.department_code]) for entry in entries
+        ]
 
 
 def build_settings(**overrides: object) -> AppSettings:
@@ -94,7 +102,9 @@ def test_soongsil_service_builds_dynamic_universities_faculties_and_courses() ->
     service = SoongsilService(build_settings(), client=client)
 
     colleges = service.get_colleges("soongsil", year="2026", semester="1")
-    departments = service.get_departments("soongsil", "11000001", year="2026", semester="1")
+    departments = service.get_departments(
+        "soongsil", "11000001", year="2026", semester="1"
+    )
     courses, raw_payloads = service.collect_courses(year="2026", semester="1")
 
     assert [college.code for college in colleges] == ["11000001", "12000001"]
@@ -104,15 +114,21 @@ def test_soongsil_service_builds_dynamic_universities_faculties_and_courses() ->
     assert {course.semester_name for course in courses} == {"2026학년도 1학기"}
     assert len(raw_payloads) == 2
     assert client.list_calls == [("2026", "1학기")]
-    assert client.collect_calls == [("2026", "1학기", [("11000001", "1100000101"), ("12000001", "1200000101")])]
+    assert client.collect_calls == [
+        ("2026", "1학기", [("11000001", "1100000101"), ("12000001", "1200000101")])
+    ]
 
 
 def test_soongsil_service_can_filter_by_university_or_faculty_code() -> None:
     client = FakeClient()
     service = SoongsilService(build_settings(), client=client)
 
-    by_university = service.get_courses("2026", "1", "soongsil", "11000001", "soongsil_all")
-    by_faculty = service.get_courses("2026", "1", "soongsil", "soongsil_all", "1200000101")
+    by_university = service.get_courses(
+        "2026", "1", "soongsil", "11000001", "soongsil_all"
+    )
+    by_faculty = service.get_courses(
+        "2026", "1", "soongsil", "soongsil_all", "1200000101"
+    )
 
     assert [course.course_code for course in by_university] == ["2150517201"]
     assert [course.course_code for course in by_faculty] == ["MATH1001"]
@@ -127,4 +143,6 @@ def test_soongsil_service_normalizes_unified_semester_labels() -> None:
     service.collect_courses(year="2026", semester="summer")
 
     assert client.list_calls == [("2026", "여름학기")]
-    assert client.collect_calls == [("2026", "여름학기", [("11000001", "1100000101"), ("12000001", "1200000101")])]
+    assert client.collect_calls == [
+        ("2026", "여름학기", [("11000001", "1100000101"), ("12000001", "1200000101")])
+    ]
