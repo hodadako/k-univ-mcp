@@ -28,6 +28,14 @@ pip install -e .[dev]
 playwright install chromium
 ```
 
+## 테스트
+
+```bash
+python -m pytest
+```
+
+GitHub Actions는 모든 push와 pull request마다 같은 테스트 명령을 실행합니다.
+
 ## CLI 예시
 
 자세한 사용 예시는 [`docs/cli-examples.md`](docs/cli-examples.md)를 참고하세요.
