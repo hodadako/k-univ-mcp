@@ -22,6 +22,64 @@ class HanyangService:
     pgm_id: str = "P310278"
     menu_id: str = "M006631"
     tk: str = ""
+    page_size: int = 500
+
+    @staticmethod
+    def _extract_data_list(payload: dict[str, Any]) -> list[dict[str, Any]]:
+        for value in payload.values():
+            if not isinstance(value, list) or not value:
+                continue
+            first = value[0]
+            if not isinstance(first, dict):
+                continue
+            data_list = first.get("list", [])
+            if isinstance(data_list, list):
+                return data_list
+        return []
+
+    def _fetch_all_course_rows(
+        self,
+        *,
+        year: str,
+        semester: str,
+        org_code: str,
+    ) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        skip_rows = 0
+        total_count: int | None = None
+
+        while True:
+            payload = self.client.find_courses(
+                year=year,
+                semester=semester,
+                org_code=org_code,
+                pgm_id=self.pgm_id,
+                menu_id=self.menu_id,
+                tk=self.tk,
+                skip_rows=skip_rows,
+                max_rows=self.page_size,
+            )
+            page_rows = self._extract_data_list(payload)
+            if not page_rows:
+                break
+
+            rows.extend(page_rows)
+
+            if total_count is None:
+                raw_total = page_rows[0].get("totalCnt")
+                try:
+                    total_count = int(raw_total) if raw_total is not None else None
+                except (TypeError, ValueError):
+                    total_count = None
+
+            if total_count is not None and len(rows) >= total_count:
+                break
+            if len(page_rows) < self.page_size:
+                break
+
+            skip_rows += len(page_rows)
+
+        return rows
 
     @staticmethod
     def _normalize_semester(semester: str) -> str:
@@ -78,7 +136,14 @@ class HanyangService:
                     break
 
             if not data_list:
-                return [College(campus_code=public_campus_code, code=public_campus_code, name="전체", raw={})]
+                return [
+                    College(
+                        campus_code=public_campus_code,
+                        code=public_campus_code,
+                        name="전체",
+                        raw={},
+                    )
+                ]
 
             # Map pgmNm/pgmCd to College
             # Note: Hanyang's hierarchy is a bit flat in findPgmList
@@ -92,7 +157,14 @@ class HanyangService:
                 for item in data_list
             ]
         except Exception:
-            return [College(campus_code=public_campus_code, code=public_campus_code, name="전체", raw={})]
+            return [
+                College(
+                    campus_code=public_campus_code,
+                    code=public_campus_code,
+                    name="전체",
+                    raw={},
+                )
+            ]
 
     def get_departments(
         self,
@@ -124,21 +196,11 @@ class HanyangService:
     ) -> list[Course]:
         resolved_semester = self._normalize_semester(semester)
         public_campus_code = self._public_campus_code(campus_code)
-        payload = self.client.find_courses(
+        rows = self._fetch_all_course_rows(
             year=year,
             semester=resolved_semester,
             org_code=self._upstream_campus_code(campus_code),
-            pgm_id=self.pgm_id,
-            menu_id=self.menu_id,
-            tk=self.tk,
         )
-
-        # Hanyang response structure: {"DS_SUUPGS03TTM01": [{"list": [...]}]}
-        rows = []
-        for key in payload:
-            if isinstance(payload[key], list) and len(payload[key]) > 0:
-                data_list = payload[key][0].get("list", [])
-                rows.extend(data_list)
 
         courses = [
             build_course(
@@ -172,27 +234,20 @@ class HanyangService:
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 
-        resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
+        resolved_public_campus_code = (
+            self._public_campus_code(campus_code) if campus_code is not None else None
+        )
         campuses = [
             c
             for c in self.get_campuses(year=year, semester=resolved_semester)
             if resolved_public_campus_code in {None, c.code}
         ]
         for campus in campuses:
-            payload = self.client.find_courses(
+            data_list = self._fetch_all_course_rows(
                 year=year,
                 semester=resolved_semester,
                 org_code=self._upstream_campus_code(campus.code),
-                pgm_id=self.pgm_id,
-                menu_id=self.menu_id,
-                tk=self.tk,
             )
-
-            data_list = []
-            for key in payload:
-                if isinstance(payload[key], list) and len(payload[key]) > 0:
-                    data_list = payload[key][0].get("list", [])
-                    break
 
             raw_payloads.append(
                 RawPayloadDump(
@@ -216,9 +271,17 @@ class HanyangService:
                 )
 
                 # Apply filters if provided
-                if college_code and college_code != campus.code and course.college_code != college_code:
+                if (
+                    college_code
+                    and college_code != campus.code
+                    and course.college_code != college_code
+                ):
                     continue
-                if department_code and department_code != campus.code and course.department_code != department_code:
+                if (
+                    department_code
+                    and department_code != campus.code
+                    and course.department_code != department_code
+                ):
                     continue
 
                 courses.append(course)

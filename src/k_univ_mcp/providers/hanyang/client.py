@@ -42,7 +42,9 @@ class HanyangClient:
     session_refresh_retries: int = 1
     refresh_cookie_header: Callable[[], str] | None = None
     session: requests.Session | None = None
-    _refresh_lock: threading.Lock = field(init=False, repr=False, default_factory=threading.Lock)
+    _refresh_lock: threading.Lock = field(
+        init=False, repr=False, default_factory=threading.Lock
+    )
 
     def __post_init__(self) -> None:
         if self.session is None:
@@ -87,14 +89,20 @@ class HanyangClient:
 
     def _decode_response(self, path: str, response: Response) -> dict[str, Any]:
         if response.status_code in {401, 403}:
-            raise HanyangAuthenticationError(f"Hanyang session rejected the request for {path}.")
+            raise HanyangAuthenticationError(
+                f"Hanyang session rejected the request for {path}."
+            )
         if response.status_code != 200:
-            raise HanyangTransportError(f"{path} returned HTTP {response.status_code}: {response.text[:300]}")
+            raise HanyangTransportError(
+                f"{path} returned HTTP {response.status_code}: {response.text[:300]}"
+            )
 
         try:
             payload = response.json()
         except json.JSONDecodeError as exc:
-            raise HanyangUnexpectedResponseError(f"{path} returned non-JSON content: {response.text[:300]}") from exc
+            raise HanyangUnexpectedResponseError(
+                f"{path} returned non-JSON content: {response.text[:300]}"
+            ) from exc
 
         return payload
 
@@ -126,7 +134,9 @@ class HanyangClient:
             try:
                 # Use data=json.dumps to preserve the 'application/json+sua' Content-Type header
                 # set in __post_init__. Using json= will override it to 'application/json'.
-                response = session.post(url, params=params, data=json.dumps(json_data), timeout=self.timeout)
+                response = session.post(
+                    url, params=params, data=json.dumps(json_data), timeout=self.timeout
+                )
                 payload = self._decode_response(path, response)
                 time.sleep(self.sleep_seconds)
                 return payload
@@ -143,7 +153,15 @@ class HanyangClient:
             raise last_error
         raise HanyangTransportError(f"Hanyang request failed for {path}")
 
-    def list_programs(self, year: str, semester: str, org_code: str, pgm_id: str, menu_id: str, tk: str) -> dict[str, Any]:
+    def list_programs(
+        self,
+        year: str,
+        semester: str,
+        org_code: str,
+        pgm_id: str,
+        menu_id: str,
+        tk: str,
+    ) -> dict[str, Any]:
         path = "/sugang/SgscAct/findPgmList.do"
         params = {
             "pgmId": pgm_id,
@@ -165,6 +183,7 @@ class HanyangClient:
         pgm_id: str,
         menu_id: str,
         tk: str,
+        skip_rows: int = 0,
         max_rows: int = 500,
     ) -> dict[str, Any]:
         path = "/sugang/SgscAct/findSuupSearchSugangSiganpyo.do"
@@ -174,7 +193,7 @@ class HanyangClient:
             "tk": tk,
         }
         json_data = {
-            "skipRows": "0",
+            "skipRows": str(skip_rows),
             "maxRows": str(max_rows),
             "strLocaleGb": "ko",
             "strIsSugangSys": "true",
