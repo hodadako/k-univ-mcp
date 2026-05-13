@@ -14,8 +14,8 @@ GACHON_GLOBAL_CAMPUS_CODE = "gachon-global"
 GACHON_MEDICAL_CAMPUS_CODE = "gachon-medical"
 
 GACHON_CAMPUSES: dict[str, tuple[str, str]] = {
-    GACHON_GLOBAL_CAMPUS_CODE: ("가천대학교 글로벌캠퍼스", "20"),
-    GACHON_MEDICAL_CAMPUS_CODE: ("가천대학교 메디컬캠퍼스", "21"),
+    GACHON_GLOBAL_CAMPUS_CODE: ("글로벌캠퍼스", "20"),
+    GACHON_MEDICAL_CAMPUS_CODE: ("메디컬캠퍼스", "21"),
 }
 
 

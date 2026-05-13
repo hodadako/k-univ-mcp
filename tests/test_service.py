@@ -89,7 +89,7 @@ def test_get_campuses_prefers_live_discovery() -> None:
     campuses = service.get_campuses(year="2026", semester="10")
 
     assert [campus.code for campus in campuses] == ["sinchon-undergraduate"]
-    assert campuses[0].name == "연세대학교 신촌캠퍼스 학부"
+    assert campuses[0].name == "신촌캠퍼스 학부"
 
 
 def test_get_universities_prefers_live_discovery() -> None:
@@ -108,7 +108,7 @@ def test_get_campuses_falls_back_to_seed_when_live_discovery_fails() -> None:
 
     assert len(campuses) >= 1
     assert any(campus.code == "sinchon-undergraduate" for campus in campuses)
-    assert any(campus.code == "sinchon-undergraduate" and campus.name == "연세대학교 신촌캠퍼스 학부" for campus in campuses)
+    assert any(campus.code == "sinchon-undergraduate" and campus.name == "신촌캠퍼스 학부" for campus in campuses)
 
 
 def test_get_universities_falls_back_to_seed_when_live_discovery_fails() -> None:
@@ -174,7 +174,7 @@ def test_collect_courses_builds_domain_objects() -> None:
     )
     assert len(courses) == 1
     assert courses[0].title == "미적분학"
-    assert courses[0].campus_name == "연세대학교 신촌캠퍼스 학부"
+    assert courses[0].campus_name == "신촌캠퍼스 학부"
     assert len(raw_payloads) == 1
 
 

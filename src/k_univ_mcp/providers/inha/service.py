@@ -10,7 +10,7 @@ from k_univ_mcp.providers.inha.parser import build_course
 from k_univ_mcp.semester import normalize_provider_semester
 
 INHA_CAMPUS_CODE = "yonghyeon"
-INHA_CAMPUS_NAME = "인하대학교 용현캠퍼스"
+INHA_CAMPUS_NAME = "용현캠퍼스"
 
 
 @dataclass(slots=True)

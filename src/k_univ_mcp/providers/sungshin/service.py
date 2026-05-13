@@ -8,8 +8,8 @@ from k_univ_mcp.providers.sungshin.parser import build_course
 from k_univ_mcp.semester import normalize_provider_semester
 
 SUNGSHIN_CAMPUSES: dict[str, tuple[str, str]] = {
-    "sujeong": ("COMM060.1", "성신여자대학교 수정캠퍼스"),
-    "unjeong": ("COMM060.2", "성신여자대학교 운정캠퍼스"),
+    "sujeong": ("COMM060.1", "수정캠퍼스"),
+    "unjeong": ("COMM060.2", "운정캠퍼스"),
 }
 
 

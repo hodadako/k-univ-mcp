@@ -30,7 +30,7 @@ def test_build_course_maps_inha_fields() -> None:
         year="2026",
         semester="10",
         campus_code="yonghyeon",
-        campus_name="인하대학교 용현캠퍼스",
+        campus_name="용현캠퍼스",
         college_code="공과대학",
         college_name="공과대학",
         department_code="0194002",

@@ -37,7 +37,7 @@ DONGGUK_CAMPUS_ADAPTERS: dict[str, DonggukCampusAdapter] = {
     "seoul": DonggukCampusAdapter(
         public_code="seoul",
         code="CM030.10",
-        name="동국대학교 서울캠퍼스",
+        name="서울캠퍼스",
         base_url="https://support.dongguk.edu",
         index_path="/unis/index.do?t=6544684B636D786A4E6B4A46566E63355A45394D536D78524E44526F647A3039",
         campus_fg="S",
@@ -47,7 +47,7 @@ DONGGUK_CAMPUS_ADAPTERS: dict[str, DonggukCampusAdapter] = {
     "wise": DonggukCampusAdapter(
         public_code="wise",
         code="CM030.21",
-        name="동국대학교 WISE캠퍼스",
+        name="WISE캠퍼스",
         base_url="https://support.dongguk.ac.kr",
         index_path="/unis/index.do?t=654867724D6E564B57577777554374315558647861564273646A524251543039",
         campus_fg="K",

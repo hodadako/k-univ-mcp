@@ -20,12 +20,12 @@ YONSEI_CLICK_SELECTOR = '[data-ndid="93"][role="button"]'
 YONSEI_REQUIRED_BROWSER_COOKIES = ("JSESSIONID",)
 
 YONSEI_CAMPUSES: dict[str, tuple[str, str]] = {
-    "sinchon-undergraduate": ("s1", "연세대학교 신촌캠퍼스 학부"),
-    "mirae-undergraduate": ("s2", "연세대학교 미래캠퍼스 학부"),
-    "sinchon-graduate": ("s3", "연세대학교 신촌캠퍼스 대학원"),
-    "mirae-graduate": ("s4", "연세대학교 미래캠퍼스 대학원"),
-    "sinchon-medical": ("s7", "연세대학교 신촌캠퍼스 의료원"),
-    "mirae-medical": ("s8", "연세대학교 미래캠퍼스 의료원"),
+    "sinchon-undergraduate": ("s1", "신촌캠퍼스 학부"),
+    "mirae-undergraduate": ("s2", "미래캠퍼스 학부"),
+    "sinchon-graduate": ("s3", "신촌캠퍼스 대학원"),
+    "mirae-graduate": ("s4", "미래캠퍼스 대학원"),
+    "sinchon-medical": ("s7", "신촌캠퍼스 의료원"),
+    "mirae-medical": ("s8", "미래캠퍼스 의료원"),
 }
 
 YONSEI_UPSTREAM_TO_PUBLIC_CAMPUS: dict[str, str] = {

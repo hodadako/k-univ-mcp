@@ -210,8 +210,8 @@ def test_get_campuses_returns_static_seoul_and_wise() -> None:
     campuses = service.get_campuses(year="2026", semester="CM160.10")
 
     assert [(campus.code, campus.name) for campus in campuses] == [
-        ("seoul", "동국대학교 서울캠퍼스"),
-        ("wise", "동국대학교 WISE캠퍼스"),
+        ("seoul", "서울캠퍼스"),
+        ("wise", "WISE캠퍼스"),
     ]
 
 

@@ -37,7 +37,7 @@ class SoongsilService:
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
         _ = (year, semester)
-        return [Campus(code="soongsil", name="숭실대학교", english_name="Soongsil College")]
+        return [Campus(code="soongsil", name="숭실", english_name="Soongsil College")]
 
     def get_colleges(
         self,
@@ -103,7 +103,7 @@ class SoongsilService:
                     semester=resolved_semester,
                     semester_name=semester_name,
                     campus_code=campus_code,
-                    campus_name="숭실대학교",
+                    campus_name="숭실",
                     college_code=entry.college_code,
                     college_name=entry.college_name,
                     department_code=entry.department_code,
@@ -160,7 +160,7 @@ class SoongsilService:
                     semester=resolved_semester,
                     semester_name=semester_name,
                     campus_code=campus_code,
-                    campus_name="숭실대학교",
+                    campus_name="숭실",
                     college_code=entry.college_code,
                     college_name=entry.college_name,
                     department_code=entry.department_code,

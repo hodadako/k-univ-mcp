@@ -46,7 +46,7 @@ def test_build_course_maps_yonsei_fields() -> None:
         year="2026",
         semester="10",
         campus_code="sinchon-undergraduate",
-        campus_name="연세대학교 신촌캠퍼스 학부",
+        campus_name="신촌캠퍼스 학부",
         college_code="C001",
         college_name="공과대학",
         department_code="D001",

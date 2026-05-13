@@ -24,7 +24,7 @@ def test_build_course():
         year="2025",
         semester="COMM063.10",
         campus_code="sujeong",
-        campus_name="성신여자대학교 수정캠퍼스",
+        campus_name="수정캠퍼스",
     )
 
     assert course.title == "Test Course"
