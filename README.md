@@ -172,8 +172,9 @@ python -m k_univ_mcp.mcp_server
 <summary>한양대학교 (`hanyang`)</summary>
 
 - 지원 캠퍼스
-  - 서울: public slug `seoul`, upstream code `H0002256`
-  - ERICA: public slug `erica`, upstream code `H0002263`
+  - 서울: public slug `seoul`, default undergraduate request org code `H0002256`
+  - ERICA: public slug `erica`, default undergraduate request org code `Y0000316`
+- 학부 외 대학원/기타 조직 선택값은 campus와 분리된 별도 request org mapping으로 관리합니다.
 - 시작 페이지: `https://portal.hanyang.ac.kr/sugang/sulg.do`
 - 확인된 API 경로
   - 교과목 조회: `/sugang/SgscAct/findSuupSearchSugangSiganpyo.do`

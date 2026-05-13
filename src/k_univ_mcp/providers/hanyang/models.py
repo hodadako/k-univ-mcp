@@ -67,3 +67,11 @@ class HanyangCourseRow:
     @property
     def slg_sosok_nm(self) -> str | None:
         return self.raw.get("slgSosokNm")
+
+    @property
+    def ban_sosok_nm(self) -> str | None:
+        return self.raw.get("banSosokNm")
+
+    @property
+    def gnj_sosok_nm(self) -> str | None:
+        return self.raw.get("gnjSosokNm")

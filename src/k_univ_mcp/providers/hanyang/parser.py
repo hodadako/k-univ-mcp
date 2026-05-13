@@ -51,8 +51,12 @@ def build_course(
     semester: str,
     campus_code: str,
     campus_name: str | None = None,
+    college_code: str | None = None,
+    college_name: str | None = None,
 ) -> Course:
     meeting_slots = parse_meeting_slots(row.suup_times)
+
+    resolved_college_name = college_name or row.jojik_gb_nm
 
     return Course(
         provider="hanyang",
@@ -61,8 +65,8 @@ def build_course(
         semester_name=row.semester_name,
         campus_code=campus_code,
         campus_name=campus_name or row.campus_nm,
-        college_code=row.jojik_gb_nm or "",
-        college_name=row.jojik_gb_nm,
+        college_code=college_code or row.jojik_gb_nm or "",
+        college_name=resolved_college_name,
         department_code=row.slg_sosok_cd or "",
         department_name=row.slg_sosok_nm,
         course_code=row.haksu_no,
