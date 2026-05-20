@@ -6,6 +6,7 @@ from pathlib import Path
 
 from k_univ_mcp import cli
 from k_univ_mcp.browser_bootstrap import BrowserBootstrapError
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress
 from k_univ_mcp.providers.dongguk.client import DonggukError
 from k_univ_mcp.providers.yonsei.client import YonseiAuthenticationError
 
@@ -324,7 +325,18 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
         def __init__(self, provider: str) -> None:
             self.provider = provider
 
-        def collect_courses(self, *, year: str, semester: str, campus_code=None, college_code=None, department_code=None):
+        def collect_courses(
+            self,
+            *,
+            year: str,
+            semester: str,
+            campus_code=None,
+            college_code=None,
+            department_code=None,
+            progress_callback=None,
+            failure_callback=None,
+        ):
+            _ = (campus_code, college_code, department_code, progress_callback, failure_callback)
             return [{"provider": self.provider, "year": year, "semester": semester}], []
 
     def fake_create_yonsei_service(settings):
@@ -405,16 +417,19 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
         str(tmp_path / "soongsil"),
         str(tmp_path / "hanyang"),
     ]
-    assert dongguk_calls == [{
-        "year": "2026",
-        "semester": "1",
-        "outdir": tmp_path / "dongguk",
-        "campus_code": None,
-        "college_code": None,
-        "department_code": None,
-        "batch_index": None,
-        "batch_size": 20,
-    }]
+    assert "yonsei   [loading.............]" in captured.err
+    assert "dongguk  [loading.............]" in captured.err
+    assert len(dongguk_calls) == 1
+    assert dongguk_calls[0]["year"] == "2026"
+    assert dongguk_calls[0]["semester"] == "1"
+    assert dongguk_calls[0]["outdir"] == tmp_path / "dongguk"
+    assert dongguk_calls[0]["campus_code"] is None
+    assert dongguk_calls[0]["college_code"] is None
+    assert dongguk_calls[0]["department_code"] is None
+    assert dongguk_calls[0]["batch_index"] is None
+    assert dongguk_calls[0]["batch_size"] == 20
+    assert callable(dongguk_calls[0]["progress_callback"])
+    assert callable(dongguk_calls[0]["failure_callback"])
     assert captured_yonsei_settings["enable_browser_bootstrap"] is True
     assert captured_yonsei_settings["browser_bootstrap_on_start"] is True
 
@@ -453,7 +468,18 @@ def test_all_export_surfaces_provider_context_on_failure(monkeypatch, capsys, tm
         def __init__(self, provider: str) -> None:
             self.provider = provider
 
-        def collect_courses(self, *, year: str, semester: str, campus_code=None, college_code=None, department_code=None):
+        def collect_courses(
+            self,
+            *,
+            year: str,
+            semester: str,
+            campus_code=None,
+            college_code=None,
+            department_code=None,
+            progress_callback=None,
+            failure_callback=None,
+        ):
+            _ = (campus_code, college_code, department_code, progress_callback, failure_callback)
             return [{"provider": self.provider, "year": year, "semester": semester}], []
 
     monkeypatch.setattr(cli, "create_yonsei_service", lambda settings: RecordingService("yonsei"))
@@ -481,3 +507,101 @@ def test_all_export_surfaces_provider_context_on_failure(monkeypatch, capsys, tm
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "[dongguk] Dongguk export failed" in captured.err
+
+
+def test_single_provider_export_prints_progress_bar_to_stderr(monkeypatch, capsys, tmp_path: Path) -> None:
+    events: list[str] = []
+
+    class RecordingService:
+        def collect_courses(
+            self,
+            *,
+            year: str,
+            semester: str,
+            campus_code=None,
+            college_code=None,
+            department_code=None,
+            progress_callback=None,
+            failure_callback=None,
+        ):
+            _ = (campus_code, college_code, department_code, failure_callback)
+            events.append("collect")
+            assert progress_callback is not None
+            progress_callback(ExportProgress(provider="inha", current=1, total=2, label="step-1"))
+            progress_callback(ExportProgress(provider="inha", current=2, total=2, label="step-2"))
+            return [{"provider": "inha", "year": year, "semester": semester}], []
+
+    def fake_create_inha_service() -> RecordingService:
+        events.append("create")
+        return RecordingService()
+
+    monkeypatch.setattr(cli, "create_inha_service", fake_create_inha_service)
+    monkeypatch.setattr(cli, "export_courses", lambda courses, outdir, stem, raw_payloads=None: [str(outdir / f"{stem}.json")])
+
+    exit_code = cli.main([
+        "inha",
+        "export",
+        "--year",
+        "2026",
+        "--semester",
+        "1",
+        "--outdir",
+        str(tmp_path),
+    ])
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert events == ["create", "collect"]
+    assert "inha" in captured.err
+    assert "[loading.............]" in captured.err
+    assert captured.err.index("[loading.............]") < captured.err.index("[##########..........]  50%")
+    assert "[##########..........]  50%" in captured.err
+    assert "[####################] 100%" in captured.err
+
+
+def test_single_provider_export_logs_failure_context_to_stderr(monkeypatch, capsys, tmp_path: Path) -> None:
+    class FailingService:
+        def collect_courses(
+            self,
+            *,
+            year: str,
+            semester: str,
+            campus_code=None,
+            college_code=None,
+            department_code=None,
+            progress_callback=None,
+            failure_callback=None,
+        ):
+            _ = (year, semester, progress_callback)
+            assert failure_callback is not None
+            failure_callback(
+                ExportFailureDiagnostic(
+                    provider="inha",
+                    stage="collect_courses",
+                    error_type="RuntimeError",
+                    message="department fetch failed",
+                    year="2026",
+                    semester="1",
+                    campus_code="yonghyeon",
+                    college_code="dept",
+                    department_code="D001",
+                )
+            )
+            raise RuntimeError("department fetch failed")
+
+    monkeypatch.setattr(cli, "create_inha_service", lambda: FailingService())
+
+    exit_code = cli.main([
+        "inha",
+        "export",
+        "--year",
+        "2026",
+        "--semester",
+        "1",
+        "--outdir",
+        str(tmp_path),
+    ])
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "[export-error] inha / collect_courses / yonghyeon / dept / D001: RuntimeError: department fetch failed" in captured.err

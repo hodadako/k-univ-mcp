@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from k_univ_mcp.browser_bootstrap import BrowserBootstrapSettings, BrowserBootstrapTarget, BrowserSessionBootstrap
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress, FailureCallback, ProgressCallback
 from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.yonsei.bootstrap import EnvCookieBootstrap
 from k_univ_mcp.providers.yonsei.client import YonseiClient, YonseiError
@@ -249,11 +250,14 @@ class YonseiService:
         campus_code: str | None = None,
         college_code: str | None = None,
         department_code: str | None = None,
+        progress_callback: ProgressCallback | None = None,
+        failure_callback: FailureCallback | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         resolved_year, resolved_semester = self._require_semester(year, semester)
         resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
+        targets: list[tuple[Campus, College, Department]] = []
 
         campuses = [
             campus
@@ -278,39 +282,72 @@ class YonseiService:
                     if department_code in {None, department.code}
                 ]
                 for department in departments:
-                    upstream_campus_code = self._resolve_upstream_campus_code(campus.code)
-                    payload = self._require_client().list_courses(
-                        resolved_year,
-                        resolved_semester,
-                        upstream_campus_code,
-                        college.code,
-                        department.code,
-                    )
-                    raw_payloads.append(
-                        RawPayloadDump(
+                    targets.append((campus, college, department))
+
+        for current, (campus, college, department) in enumerate(targets, start=1):
+            upstream_campus_code = self._resolve_upstream_campus_code(campus.code)
+            try:
+                payload = self._require_client().list_courses(
+                    resolved_year,
+                    resolved_semester,
+                    upstream_campus_code,
+                    college.code,
+                    department.code,
+                )
+            except Exception as exc:
+                if failure_callback is not None:
+                    failure_callback(
+                        ExportFailureDiagnostic(
                             provider="yonsei",
+                            stage="collect_courses",
+                            error_type=type(exc).__name__,
+                            message=str(exc),
                             year=resolved_year,
                             semester=resolved_semester,
                             campus_code=campus.code,
                             college_code=college.code,
                             department_code=department.code,
-                            payload=payload,
                         )
                     )
-                    for item in payload:
-                        courses.append(
-                            build_course(
-                                YonseiCourseRow(item),
-                                year=resolved_year,
-                                semester=resolved_semester,
-                                campus_code=campus.code,
-                                campus_name=campus.name,
-                                college_code=college.code,
-                                college_name=college.name,
-                                department_code=department.code,
-                                department_name=department.name,
-                            )
-                        )
+                raise
+
+            raw_payloads.append(
+                RawPayloadDump(
+                    provider="yonsei",
+                    year=resolved_year,
+                    semester=resolved_semester,
+                    campus_code=campus.code,
+                    college_code=college.code,
+                    department_code=department.code,
+                    payload=payload,
+                )
+            )
+            for item in payload:
+                courses.append(
+                    build_course(
+                        YonseiCourseRow(item),
+                        year=resolved_year,
+                        semester=resolved_semester,
+                        campus_code=campus.code,
+                        campus_name=campus.name,
+                        college_code=college.code,
+                        college_name=college.name,
+                        department_code=department.code,
+                        department_name=department.name,
+                    )
+                )
+            if progress_callback is not None:
+                progress_callback(
+                    ExportProgress(
+                        provider="yonsei",
+                        current=current,
+                        total=len(targets),
+                        label=f"{campus.name} / {college.name} / {department.name}",
+                        campus_code=campus.code,
+                        college_code=college.code,
+                        department_code=department.code,
+                    )
+                )
         return courses, raw_payloads
 
 

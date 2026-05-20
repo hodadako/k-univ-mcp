@@ -3,23 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress, FailureCallback, ProgressCallback
 from k_univ_mcp.models import Campus, College, Course, Department, RawPayloadDump
 from k_univ_mcp.providers.hanyang.client import HanyangClient
 from k_univ_mcp.providers.hanyang.models import HanyangCourseRow
 from k_univ_mcp.providers.hanyang.parser import build_course
 from k_univ_mcp.semester import normalize_provider_semester
 from k_univ_mcp.settings import AppSettings
-
-HANYANG_CAMPUSES: dict[str, str] = {
-    "seoul": "서울캠퍼스",
-    "erica": "ERICA캠퍼스",
-}
-
-HANYANG_DEFAULT_REQUEST_ORG_CODES: dict[str, str] = {
-    "seoul": "H0002256",
-    "erica": "Y0000316",
-}
-
 
 @dataclass(frozen=True, slots=True)
 class HanyangOrgOption:
@@ -71,6 +61,74 @@ HANYANG_ORG_OPTIONS: dict[str, HanyangOrgOption] = {
     "Y0001157": HanyangOrgOption("Y0001157", "국제겨울학교(ERICA)", "erica", "special"),
     "H0005114": HanyangOrgOption("H0005114", "창업대학원", None, "graduate"),
 }
+
+
+@dataclass(frozen=True, slots=True)
+class HanyangCampusOption:
+    code: str
+    name: str
+    default_request_org_code: str
+    source_campus_code: str | None
+    category: str
+
+
+HANYANG_PUBLIC_CAMPUS_OPTIONS: tuple[HanyangCampusOption, ...] = (
+    HanyangCampusOption("seoul", "서울캠퍼스", "H0002256", "seoul", "undergraduate"),
+    HanyangCampusOption("erica", "ERICA캠퍼스", "Y0000316", "erica", "undergraduate"),
+    HanyangCampusOption("graduate-general", "일반대학원", "H0000476", None, "graduate"),
+    HanyangCampusOption("graduate-urban", "도시대학원", "H0001999", None, "graduate"),
+    HanyangCampusOption("graduate-business", "경영대학원", "H0001640", None, "graduate"),
+    HanyangCampusOption("graduate-international-studies-legacy", "국제학대학원(2025-1학기 이전)(서울/대학원)", "H0001981", "seoul", "graduate"),
+    HanyangCampusOption("graduate-international", "국제대학원", "H0005128", None, "graduate"),
+    HanyangCampusOption("graduate-business-admin", "경영전문대학원", "H0000457", None, "graduate"),
+    HanyangCampusOption("graduate-medical", "의학전문대학원", "H0000364", "seoul", "graduate"),
+    HanyangCampusOption("graduate-law", "법학전문대학원", "H0000368", None, "graduate"),
+    HanyangCampusOption("graduate-biomedical-engineering", "의생명공학전문대학원", "H0000449", None, "graduate"),
+    HanyangCampusOption("graduate-technology-management", "기술경영전문대학원", "H0000454", None, "graduate"),
+    HanyangCampusOption("graduate-global-management", "글로벌경영전문대학원", "H0000372", None, "graduate"),
+    HanyangCampusOption("graduate-engineering", "공학대학원", "H0002058", None, "graduate"),
+    HanyangCampusOption("graduate-public-policy", "공공정책대학원", "H0000401", None, "graduate"),
+    HanyangCampusOption("graduate-education", "교육대학원", "H0001754", None, "graduate"),
+    HanyangCampusOption("graduate-international-tourism", "국제관광대학원", "H0002028", None, "graduate"),
+    HanyangCampusOption("graduate-journalism-and-mass-communication", "언론정보대학원(대학원/서울)", "H0001932", "seoul", "graduate"),
+    HanyangCampusOption("graduate-urban-convergence-development", "도시융합개발대학원", "H0003667", None, "graduate"),
+    HanyangCampusOption("graduate-real-estate-convergence", "부동산융합대학원", "H0003812", None, "graduate"),
+    HanyangCampusOption("graduate-clinical-nursing-informatics", "임상간호정보대학원", "H0002244", None, "graduate"),
+    HanyangCampusOption("graduate-clinical-nursing", "임상간호대학원", "H0004528", None, "graduate"),
+    HanyangCampusOption("graduate-public-health", "보건대학원", "H0003902", None, "graduate"),
+    HanyangCampusOption("erica-graduate-business-management", "기업경영대학원", "Y0000213", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-innovation", "이노베이션대학원", "Y0000223", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-engineering-technology", "공학기술대학원", "Y0001037", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-cultural-industries", "문화산업대학원", "Y0001049", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-arts-and-design", "예술디자인대학원", "Y0001055", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-convergence-industry", "융합산업대학원", "Y0001197", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-industrial-management", "산업경영대학원", "Y0000268", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-design", "디자인대학원", "Y0000302", "erica", "graduate"),
+    HanyangCampusOption("erica-graduate-industrial-management-design", "산업경영디자인대학원", "Y0000178", "erica", "graduate"),
+    HanyangCampusOption("graduate-counseling-psychology", "상담심리대학원", "H0004053", None, "graduate"),
+    HanyangCampusOption("graduate-ai-convergence", "인공지능융합대학원", "H0004653", None, "graduate"),
+    HanyangCampusOption("graduate-entrepreneurship", "창업대학원", "H0005114", None, "graduate"),
+)
+
+HANYANG_PUBLIC_CAMPUS_OPTIONS_BY_CODE: dict[str, HanyangCampusOption] = {
+    option.code: option for option in HANYANG_PUBLIC_CAMPUS_OPTIONS
+}
+
+HANYANG_PUBLIC_CAMPUS_CODE_BY_REQUEST_ORG_CODE: dict[str, str] = {
+    option.default_request_org_code: option.code for option in HANYANG_PUBLIC_CAMPUS_OPTIONS
+}
+
+HANYANG_CAMPUSES = {
+    option.code: option.name for option in HANYANG_PUBLIC_CAMPUS_OPTIONS
+}
+
+HANYANG_DEFAULT_REQUEST_ORG_CODES = {
+    option.code: option.default_request_org_code for option in HANYANG_PUBLIC_CAMPUS_OPTIONS
+}
+
+HANYANG_DEFAULT_COLLECT_CAMPUS_CODES: tuple[str, ...] = tuple(
+    option.code for option in HANYANG_PUBLIC_CAMPUS_OPTIONS if option.category == "undergraduate"
+)
 
 HANYANG_COLLEGES: dict[str, tuple[str, ...]] = {
     "seoul": (
@@ -291,21 +349,36 @@ class HanyangService:
         return normalize_provider_semester("hanyang", semester)
 
     @staticmethod
-    def _public_campus_code(campus_code: str) -> str:
-        if campus_code in HANYANG_CAMPUSES:
-            return campus_code
-        for public_code, org_code in HANYANG_DEFAULT_REQUEST_ORG_CODES.items():
-            if campus_code == org_code:
-                return public_code
+    def _campus_option(campus_code: str) -> HanyangCampusOption:
+        if campus_code in HANYANG_PUBLIC_CAMPUS_OPTIONS_BY_CODE:
+            return HANYANG_PUBLIC_CAMPUS_OPTIONS_BY_CODE[campus_code]
+        public_campus_code = HANYANG_PUBLIC_CAMPUS_CODE_BY_REQUEST_ORG_CODE.get(campus_code)
+        if public_campus_code is not None:
+            return HANYANG_PUBLIC_CAMPUS_OPTIONS_BY_CODE[public_campus_code]
         raise ValueError(f"Unsupported Hanyang campus code: {campus_code}")
 
     @classmethod
+    def _public_campus_code(cls, campus_code: str) -> str:
+        return cls._campus_option(campus_code).code
+
+    @classmethod
     def _default_request_org_code(cls, campus_code: str) -> str:
-        return HANYANG_DEFAULT_REQUEST_ORG_CODES[cls._public_campus_code(campus_code)]
+        return cls._campus_option(campus_code).default_request_org_code
 
     @classmethod
     def _campus_name(cls, campus_code: str) -> str:
-        return HANYANG_CAMPUSES[cls._public_campus_code(campus_code)]
+        return cls._campus_option(campus_code).name
+
+    @classmethod
+    def _build_campus(cls, campus_code: str) -> Campus:
+        option = cls._campus_option(campus_code)
+        raw: dict[str, str] = {
+            "defaultRequestOrgCode": option.default_request_org_code,
+            "category": option.category,
+        }
+        if option.source_campus_code is not None:
+            raw["sourceCampusCode"] = option.source_campus_code
+        return Campus(code=option.code, name=option.name, raw=raw)
 
     @staticmethod
     def _default_colleges(public_campus_code: str) -> list[College]:
@@ -443,14 +516,7 @@ class HanyangService:
 
     def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
         _ = self._normalize_semester(semester)
-        return [
-            Campus(
-                code=public_code,
-                name=name,
-                raw={"defaultRequestOrgCode": HANYANG_DEFAULT_REQUEST_ORG_CODES[public_code]},
-            )
-            for public_code, name in HANYANG_CAMPUSES.items()
-        ]
+        return [self._build_campus(option.code) for option in HANYANG_PUBLIC_CAMPUS_OPTIONS]
 
     def get_colleges(
         self,
@@ -553,6 +619,8 @@ class HanyangService:
         campus_code: str | None = None,
         college_code: str | None = None,
         department_code: str | None = None,
+        progress_callback: ProgressCallback | None = None,
+        failure_callback: FailureCallback | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         resolved_semester = self._normalize_semester(semester)
         courses: list[Course] = []
@@ -561,22 +629,39 @@ class HanyangService:
         resolved_public_campus_code = (
             self._public_campus_code(campus_code) if campus_code is not None else None
         )
-        campuses = [
-            c
-            for c in self.get_campuses(year=year, semester=resolved_semester)
-            if resolved_public_campus_code in {None, c.code}
-        ]
-        for campus in campuses:
-            fallback_department_map = self._fallback_department_to_college(
-                year=year,
-                semester=resolved_semester,
-                campus_code=campus.code,
-            )
-            data_list = self._fetch_all_course_rows(
-                year=year,
-                semester=resolved_semester,
-                org_code=self._default_request_org_code(campus.code),
-            )
+        if resolved_public_campus_code is None:
+            campuses = [self._build_campus(public_code) for public_code in HANYANG_DEFAULT_COLLECT_CAMPUS_CODES]
+        else:
+            campuses = [self._build_campus(resolved_public_campus_code)]
+
+        for current, campus in enumerate(campuses, start=1):
+            try:
+                fallback_department_map = self._fallback_department_to_college(
+                    year=year,
+                    semester=resolved_semester,
+                    campus_code=campus.code,
+                )
+                data_list = self._fetch_all_course_rows(
+                    year=year,
+                    semester=resolved_semester,
+                    org_code=self._default_request_org_code(campus.code),
+                )
+            except Exception as exc:
+                if failure_callback is not None:
+                    failure_callback(
+                        ExportFailureDiagnostic(
+                            provider="hanyang",
+                            stage="collect_courses",
+                            error_type=type(exc).__name__,
+                            message=str(exc),
+                            year=year,
+                            semester=resolved_semester,
+                            campus_code=campus.code,
+                            college_code=college_code,
+                            department_code=department_code,
+                        )
+                    )
+                raise
 
             raw_payloads.append(
                 RawPayloadDump(
@@ -623,6 +708,19 @@ class HanyangService:
                     continue
 
                 courses.append(course)
+
+            if progress_callback is not None:
+                progress_callback(
+                    ExportProgress(
+                        provider="hanyang",
+                        current=current,
+                        total=len(campuses),
+                        label=campus.name,
+                        campus_code=campus.code,
+                        college_code=college_code,
+                        department_code=department_code,
+                    )
+                )
 
         return courses, raw_payloads
 

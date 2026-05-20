@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress, FailureCallback, ProgressCallback
 from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.sungshin.client import SungshinClient
 from k_univ_mcp.providers.sungshin.parser import build_course
@@ -124,12 +125,15 @@ class SungshinService:
         campus_code: str | None = None,
         college_code: str | None = None,
         department_code: str | None = None,
+        progress_callback: ProgressCallback | None = None,
+        failure_callback: FailureCallback | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
 
         sem_cd = _resolve_sungshin_semester(semester)
         resolved_public_campus_code = self._public_campus_code(campus_code) if campus_code is not None else None
+        targets: list[tuple[Campus, College, Department]] = []
 
         campuses = [c for c in self.get_campuses(year, semester) if resolved_public_campus_code in {None, c.code}]
         for campus in campuses:
@@ -137,34 +141,66 @@ class SungshinService:
             for college in colleges:
                 departments = [f for f in self.get_departments(campus.code, college.code, year, semester) if department_code in {None, f.code}]
                 for department in departments:
-                    rows = self.client.fetch_courses(
-                        year=year,
-                        semester=sem_cd,
-                        cmp_code=self._upstream_campus_code(campus.code),
-                        org_clsf_code=college.code,
-                        dpt_mjr_code=department.code,
-                    )
-                    raw_payloads.append(
-                        RawPayloadDump(
+                    targets.append((campus, college, department))
+
+        for current, (campus, college, department) in enumerate(targets, start=1):
+            try:
+                rows = self.client.fetch_courses(
+                    year=year,
+                    semester=sem_cd,
+                    cmp_code=self._upstream_campus_code(campus.code),
+                    org_clsf_code=college.code,
+                    dpt_mjr_code=department.code,
+                )
+            except Exception as exc:
+                if failure_callback is not None:
+                    failure_callback(
+                        ExportFailureDiagnostic(
                             provider="sungshin",
+                            stage="collect_courses",
+                            error_type=type(exc).__name__,
+                            message=str(exc),
                             year=year,
                             semester=sem_cd,
                             campus_code=campus.code,
                             college_code=college.code,
                             department_code=department.code,
-                            payload=rows,
                         )
                     )
-                    for row in rows:
-                        courses.append(
-                            build_course(
-                                row,
-                                year=year,
-                                semester=sem_cd,
-                                campus_code=campus.code,
-                                campus_name=campus.name,
-                            )
-                        )
+                raise
+            raw_payloads.append(
+                RawPayloadDump(
+                    provider="sungshin",
+                    year=year,
+                    semester=sem_cd,
+                    campus_code=campus.code,
+                    college_code=college.code,
+                    department_code=department.code,
+                    payload=rows,
+                )
+            )
+            for row in rows:
+                courses.append(
+                    build_course(
+                        row,
+                        year=year,
+                        semester=sem_cd,
+                        campus_code=campus.code,
+                        campus_name=campus.name,
+                    )
+                )
+            if progress_callback is not None:
+                progress_callback(
+                    ExportProgress(
+                        provider="sungshin",
+                        current=current,
+                        total=len(targets),
+                        label=f"{campus.name} / {college.name} / {department.name}",
+                        campus_code=campus.code,
+                        college_code=college.code,
+                        department_code=department.code,
+                    )
+                )
 
         return courses, raw_payloads
 

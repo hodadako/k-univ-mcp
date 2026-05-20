@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from k_univ_mcp.models import Course, MeetingSlot
+from k_univ_mcp.semester import semester_display_name
 from k_univ_mcp.providers.inha.models import InhaCourseRow
 
 DAY_MAP = {
@@ -51,39 +52,35 @@ def build_course(
 ) -> Course:
     meeting_slots = parse_meeting_slots(row.time_location)
 
-    return Course(
-        provider="inha",
-        year=year,
-        semester=semester,
-        semester_name=f"{year}학년도 {semester}학기",
-        campus_code=campus_code,
-        campus_name=campus_name,
-        college_code=college_code,
-        college_name=college_name,
-        department_code=department_code,
-        department_name=department_name,
-        course_code=row.course_code,
-        section=row.section,
-        course_key=row.haksu_section,
-        title=row.title,
-        title_english=None,
-        professor_name=row.professor,
-        professor_name_english=None,
-        lecture_time_raw=row.time_location,
-        lecture_time_english_raw=None,
-        classroom=None,  # Extracting classroom from time_location if needed
-        classroom_english=None,
-        campus_display_name=campus_name,
-        completion_division_name=row.category,
-        recommended_year=row.grade,
-        credits=row.credits,
-        recognized_hours=None,
-        course_class_name=None,
-        evaluation_method_name=row.evaluation,
-        cancelled=None,
-        cancelled_label=None,
-        established_department_code=department_code,
-        established_department_name=department_name,
-        meeting_slots=meeting_slots,
-        raw=row.raw,
-    )
+    return Course(provider="inha",
+    year=year, semester_code=semester, semester_name=semester_display_name(semester, year=year),
+    campus_code=campus_code,
+    campus_name=campus_name,
+    college_code=college_code,
+    college_name=college_name,
+    department_code=department_code,
+    department_name=department_name,
+    course_code=row.course_code,
+    section=row.section,
+    course_key=row.haksu_section,
+    title=row.title,
+    title_english=None,
+    professor_name=row.professor,
+    professor_name_english=None,
+    lecture_time_raw=row.time_location,
+    lecture_time_english_raw=None,
+    classroom=None,  # Extracting classroom from time_location if needed
+    classroom_english=None,
+    campus_display_name=campus_name,
+    completion_division_name=row.category,
+    recommended_year=row.grade,
+    credits=row.credits,
+    recognized_hours=None,
+    course_class_name=None,
+    evaluation_method_name=row.evaluation,
+    cancelled=None,
+    cancelled_label=None,
+    established_department_code=department_code,
+    established_department_name=department_name,
+    meeting_slots=meeting_slots,
+    raw=row.raw,)

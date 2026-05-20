@@ -47,7 +47,9 @@
 ### Course
 
 - `Course`는 최종 export와 MCP 응답의 기준 모델이다.
-- `provider`, `year`, `semester`, `campus_code`, `college_code`, `department_code`는 가능한 한 항상 채운다.
+- `provider`, `year`, `semester_code`, `campus_code`, `college_code`, `department_code`는 가능한 한 항상 채운다.
+- `semester_code`는 provider가 실제로 사용하는 학기 코드 또는 정규화된 학기 식별자다.
+- `semester_name`은 사용자가 읽을 수 있는 대표 학기명이다. raw provider 코드(`COMM063.10` 같은 값)를 그대로 노출하지 않는다.
 - `campus_name`, `college_name`, `department_name`은 각각 상위 조직의 사용자 노출 이름과 일치시킨다.
 - `course_code`는 학교가 제공하는 공식 과목번호를 우선한다.
 - `section`은 분반 값만 넣고, 과목번호와 합쳐진 문자열 전체를 중복 저장하지 않는다.

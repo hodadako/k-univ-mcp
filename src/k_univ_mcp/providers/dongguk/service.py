@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from k_univ_mcp.browser_bootstrap import BrowserBootstrapSettings, BrowserBootstrapTarget
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress, FailureCallback, ProgressCallback
 from k_univ_mcp.exporter import export_course_batches, merge_exported_batches
 from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.dongguk.bootstrap import DONGGUK_REQUIRED_BROWSER_COOKIES, DonggukBrowserBootstrap
@@ -62,7 +63,6 @@ def require_dongguk_export_batch_size(batch_size: int | None) -> int:
         raise ValueError("Dongguk export requires a positive batch_size to avoid long-running MCP timeouts.")
     return batch_size
 
-
 def export_dongguk_courses(
     service: "DonggukService",
     *,
@@ -74,6 +74,8 @@ def export_dongguk_courses(
     department_code: str | None = None,
     batch_index: int | None = None,
     batch_size: int | None = None,
+    progress_callback: ProgressCallback | None = None,
+    failure_callback: FailureCallback | None = None,
 ) -> dict[str, Any]:
     resolved_batch_size = require_dongguk_export_batch_size(batch_size)
     stem = f"dongguk_{year}_{semester}"
@@ -87,19 +89,50 @@ def export_dongguk_courses(
     total_batches = service.batch_count(total_targets, resolved_batch_size)
 
     if batch_index is not None:
-        artifacts, row_count = export_course_batches(
-            service.iter_course_batches(
-                year=year,
-                semester=semester,
-                campus_code=campus_code,
-                college_code=college_code,
-                department_code=department_code,
-                batch_index=batch_index,
-                batch_size=resolved_batch_size,
-            ),
-            outdir,
-            stem,
-        )
+        try:
+            artifacts, row_count = export_course_batches(
+                service.iter_course_batches(
+                    year=year,
+                    semester=semester,
+                    campus_code=campus_code,
+                    college_code=college_code,
+                    department_code=department_code,
+                    batch_index=batch_index,
+                    batch_size=resolved_batch_size,
+                ),
+                outdir,
+                stem,
+            )
+        except Exception as exc:
+            if failure_callback is not None:
+                failure_callback(
+                    ExportFailureDiagnostic(
+                        provider="dongguk",
+                        stage="export_batch",
+                        error_type=type(exc).__name__,
+                        message=str(exc),
+                        year=year,
+                        semester=semester,
+                        campus_code=campus_code,
+                        college_code=college_code,
+                        department_code=department_code,
+                        batch_index=batch_index,
+                    )
+                )
+            raise
+        if progress_callback is not None:
+            progress_callback(
+                ExportProgress(
+                    provider="dongguk",
+                    current=batch_index + 1,
+                    total=total_batches,
+                    label=f"batch {batch_index + 1}/{total_batches}",
+                    campus_code=campus_code,
+                    college_code=college_code,
+                    department_code=department_code,
+                    batch_index=batch_index,
+                )
+            )
         next_batch_index = batch_index + 1 if batch_index + 1 < total_batches else None
         return {
             "artifacts": artifacts,
@@ -115,19 +148,37 @@ def export_dongguk_courses(
     batch_dirs: list[Path] = []
     for current_batch_index in range(total_batches):
         batch_outdir = outdir / f"batch-{current_batch_index}"
-        artifacts, row_count = export_course_batches(
-            service.iter_course_batches(
-                year=year,
-                semester=semester,
-                campus_code=campus_code,
-                college_code=college_code,
-                department_code=department_code,
-                batch_index=current_batch_index,
-                batch_size=resolved_batch_size,
-            ),
-            batch_outdir,
-            stem,
-        )
+        try:
+            artifacts, row_count = export_course_batches(
+                service.iter_course_batches(
+                    year=year,
+                    semester=semester,
+                    campus_code=campus_code,
+                    college_code=college_code,
+                    department_code=department_code,
+                    batch_index=current_batch_index,
+                    batch_size=resolved_batch_size,
+                ),
+                batch_outdir,
+                stem,
+            )
+        except Exception as exc:
+            if failure_callback is not None:
+                failure_callback(
+                    ExportFailureDiagnostic(
+                        provider="dongguk",
+                        stage="export_batch",
+                        error_type=type(exc).__name__,
+                        message=str(exc),
+                        year=year,
+                        semester=semester,
+                        campus_code=campus_code,
+                        college_code=college_code,
+                        department_code=department_code,
+                        batch_index=current_batch_index,
+                    )
+                )
+            raise
         batch_dirs.append(batch_outdir)
         batch_results.append(
             {
@@ -136,6 +187,19 @@ def export_dongguk_courses(
                 "artifacts": artifacts,
             }
         )
+        if progress_callback is not None:
+            progress_callback(
+                ExportProgress(
+                    provider="dongguk",
+                    current=current_batch_index + 1,
+                    total=total_batches,
+                    label=f"batch {current_batch_index + 1}/{total_batches}",
+                    campus_code=campus_code,
+                    college_code=college_code,
+                    department_code=department_code,
+                    batch_index=current_batch_index,
+                )
+            )
 
     merged_artifacts, merged_row_count = merge_exported_batches(batch_dirs, outdir, stem)
     return {

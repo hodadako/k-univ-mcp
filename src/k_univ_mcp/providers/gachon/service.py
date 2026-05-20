@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress, FailureCallback, ProgressCallback
 from k_univ_mcp.models import Campus, Course, Department, RawPayloadDump, College
 from k_univ_mcp.providers.gachon.client import GachonClient
 from k_univ_mcp.providers.gachon.models import GachonCourseRow, GachonDepartmentRow
@@ -121,46 +122,82 @@ class GachonService:
         campus_code: str | None = None,
         college_code: str | None = None,
         department_code: str | None = None,
+        progress_callback: ProgressCallback | None = None,
+        failure_callback: FailureCallback | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         resolved_year, resolved_semester = self._require_semester(year, semester)
         courses: list[Course] = []
         raw_payloads: list[RawPayloadDump] = []
+        targets: list[tuple[Campus, College, Department]] = []
 
         campuses = [campus for campus in self.get_campuses(year=resolved_year, semester=resolved_semester) if campus_code in {None, campus.code}]
         for campus in campuses:
-            for college in [item for item in self.get_colleges(campus.code, year=resolved_year, semester=resolved_semester) if college_code in {None, item.code}]:
+            colleges = [item for item in self.get_colleges(campus.code, year=resolved_year, semester=resolved_semester) if college_code in {None, item.code}]
+            for college in colleges:
                 departments = [
                     item
                     for item in self.get_departments(campus.code, college.code, year=resolved_year, semester=resolved_semester)
                     if department_code in {None, item.code}
                 ]
                 for department in departments:
-                    payload = self.client.list_courses(resolved_year, resolved_semester, self._group_type(campus.code), college.code, department.code)
-                    raw_payloads.append(
-                        RawPayloadDump(
+                    targets.append((campus, college, department))
+
+        for current, (campus, college, department) in enumerate(targets, start=1):
+            try:
+                payload = self.client.list_courses(resolved_year, resolved_semester, self._group_type(campus.code), college.code, department.code)
+            except Exception as exc:
+                if failure_callback is not None:
+                    failure_callback(
+                        ExportFailureDiagnostic(
                             provider="gachon",
+                            stage="collect_courses",
+                            error_type=type(exc).__name__,
+                            message=str(exc),
                             year=resolved_year,
                             semester=resolved_semester,
                             campus_code=campus.code,
                             college_code=college.code,
                             department_code=department.code,
-                            payload=payload,
                         )
                     )
-                    for item in payload:
-                        courses.append(
-                            build_course(
-                                GachonCourseRow(item),
-                                year=resolved_year,
-                                semester=resolved_semester,
-                                campus_code=campus.code,
-                                campus_name=campus.name,
-                                college_code=college.code,
-                                college_name=college.name,
-                                department_code=department.code,
-                                department_name=department.name,
-                            )
-                        )
+                raise
+            raw_payloads.append(
+                RawPayloadDump(
+                    provider="gachon",
+                    year=resolved_year,
+                    semester=resolved_semester,
+                    campus_code=campus.code,
+                    college_code=college.code,
+                    department_code=department.code,
+                    payload=payload,
+                )
+            )
+            for item in payload:
+                courses.append(
+                    build_course(
+                        GachonCourseRow(item),
+                        year=resolved_year,
+                        semester=resolved_semester,
+                        campus_code=campus.code,
+                        campus_name=campus.name,
+                        college_code=college.code,
+                        college_name=college.name,
+                        department_code=department.code,
+                        department_name=department.name,
+                    )
+                )
+            if progress_callback is not None:
+                progress_callback(
+                    ExportProgress(
+                        provider="gachon",
+                        current=current,
+                        total=len(targets),
+                        label=f"{campus.name} / {college.name} / {department.name}",
+                        campus_code=campus.code,
+                        college_code=college.code,
+                        department_code=department.code,
+                    )
+                )
         return courses, raw_payloads
 
 

@@ -32,3 +32,5 @@ def test_build_course():
     assert course.professor_name == "Prof. Test"
     assert course.credits == "3.0"
     assert course.course_key == "AA0001-001"
+    assert course.semester_code == "COMM063.10"
+    assert course.semester_name == "2025학년도 1학기"

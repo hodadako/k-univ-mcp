@@ -55,7 +55,7 @@ class MeetingSlot:
 class Course:
     provider: str
     year: str
-    semester: str
+    semester_code: str
     semester_name: str | None
     campus_code: str
     campus_name: str | None
@@ -97,7 +97,7 @@ class Course:
         return {
             "provider": self.provider,
             "year": self.year,
-            "semester": self.semester,
+            "semester_code": self.semester_code,
             "semester_name": self.semester_name,
             "campus_code": self.campus_code,
             "campus_name": self.campus_name,

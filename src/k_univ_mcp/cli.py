@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from k_univ_mcp.browser_bootstrap import BrowserBootstrapError, BrowserBootstrapSettings, BrowserBootstrapTarget, BrowserSessionBootstrap
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress
 from k_univ_mcp.exporter import export_courses, print_json, resolve_provider_outdir
 from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_courses, require_dongguk_export_batch_size
 from k_univ_mcp.providers.dongguk.bootstrap import DonggukBrowserBootstrap
@@ -64,6 +65,72 @@ PROVIDER_HELP_TEXT: dict[str, str] = {
     "gachon": "Gachon CLI commands work zero-config by default and auto-acquire WMONID when needed; GACHON_COOKIE is optional for session overrides.",
     "hanyang": "Hanyang CLI commands work with the built-in defaults; HANYANG_COOKIE and HANYANG_TK are optional overrides when you need a specific session.",
 }
+
+
+class _CliProgressReporter:
+    def __init__(self) -> None:
+        self._active = False
+
+    @staticmethod
+    def _render_bar(current: int, total: int, width: int = 20) -> str:
+        if total <= 0:
+            filled = width
+        else:
+            filled = min(width, round((current / total) * width))
+        return "#" * filled + "." * (width - filled)
+
+    @staticmethod
+    def _render_loading_bar(width: int = 20) -> str:
+        loading = "loading"
+        return loading + "." * (width - len(loading))
+
+    @staticmethod
+    def _percent(current: int, total: int) -> int:
+        if total <= 0:
+            return 100
+        return max(0, min(100, round((current / total) * 100)))
+
+    def emit_loading(self, provider: str) -> None:
+        print(
+            f"\r{provider:<8} [{self._render_loading_bar()}]",
+            end="",
+            file=sys.stderr,
+            flush=True,
+        )
+        self._active = True
+
+    def emit_progress(self, progress: ExportProgress) -> None:
+        bar = self._render_bar(progress.current, progress.total)
+        percent = self._percent(progress.current, progress.total)
+        print(
+            f"\r{progress.provider:<8} [{bar}] {percent:3d}%",
+            end="",
+            file=sys.stderr,
+            flush=True,
+        )
+        self._active = True
+
+    def emit_failure(self, diagnostic: ExportFailureDiagnostic) -> None:
+        self.finish()
+        context_parts = [
+            diagnostic.provider,
+            diagnostic.stage,
+            diagnostic.campus_code,
+            diagnostic.college_code,
+            diagnostic.department_code,
+        ]
+        if diagnostic.batch_index is not None:
+            context_parts.append(f"batch={diagnostic.batch_index}")
+        context = " / ".join(part for part in context_parts if part)
+        print(
+            f"[export-error] {context}: {diagnostic.error_type}: {diagnostic.message}",
+            file=sys.stderr,
+        )
+
+    def finish(self) -> None:
+        if self._active:
+            print(file=sys.stderr, flush=True)
+            self._active = False
 
 
 def _add_common_provider_commands(
@@ -505,9 +572,19 @@ def _create_provider_service(provider: str, settings: AppSettings, args: argpars
     return _provider_factories()[provider](effective_settings)
 
 
-def _run_single_provider_export(provider: str, settings: AppSettings, args: argparse.Namespace) -> dict[str, Any]:
+def _run_single_provider_export(
+    provider: str,
+    settings: AppSettings,
+    args: argparse.Namespace,
+    *,
+    reporter: _CliProgressReporter | None = None,
+) -> dict[str, Any]:
     provider_args = _build_provider_args(args, provider)
+    if reporter is not None:
+        reporter.emit_loading(provider)
     service = _create_provider_service(provider, settings, provider_args)
+    progress_callback = reporter.emit_progress if reporter is not None else None
+    failure_callback = reporter.emit_failure if reporter is not None else None
 
     if provider == "dongguk":
         base_outdir = Path(provider_args.outdir) if provider_args.outdir else settings.output_dir
@@ -522,6 +599,8 @@ def _run_single_provider_export(provider: str, settings: AppSettings, args: argp
             department_code=provider_args.department,
             batch_index=provider_args.batch_index,
             batch_size=provider_args.batch_size,
+            progress_callback=progress_callback,
+            failure_callback=failure_callback,
         )
 
     courses, raw_payloads = service.collect_courses(
@@ -530,6 +609,8 @@ def _run_single_provider_export(provider: str, settings: AppSettings, args: argp
         campus_code=provider_args.campus,
         college_code=provider_args.college,
         department_code=provider_args.department,
+        progress_callback=progress_callback,
+        failure_callback=failure_callback,
     )
     base_outdir = Path(provider_args.outdir) if provider_args.outdir else settings.output_dir
     outdir = resolve_provider_outdir(base_outdir, provider)
@@ -541,14 +622,17 @@ def _run_single_provider_export(provider: str, settings: AppSettings, args: argp
 def _run_all_export(settings: AppSettings, args: argparse.Namespace) -> int:
     require_dongguk_export_batch_size(args.batch_size)
 
+    reporter = _CliProgressReporter()
     provider_results: dict[str, dict[str, Any]] = {}
     total_rows = 0
 
     for provider in SUPPORTED_PROVIDERS:
         try:
-            result = _run_single_provider_export(provider, settings, args)
-        except (ValueError, BrowserBootstrapError, YonseiError, DonggukError, GachonError, HanyangError) as exc:
+            result = _run_single_provider_export(provider, settings, args, reporter=reporter)
+        except (ValueError, RuntimeError, BrowserBootstrapError, YonseiError, DonggukError, GachonError, HanyangError) as exc:
             raise ValueError(f"[{provider}] {_format_runtime_error(provider, exc)}") from exc
+        finally:
+            reporter.finish()
         provider_results[provider] = result
         total_rows += int(result.get("row_count", 0))
 
@@ -614,15 +698,19 @@ def _run_provider_command(
         return _run_all_export(settings, args)
 
     effective_settings = _effective_cli_settings(settings, args)
-    service = _provider_factories()[args.provider](effective_settings)
-    printed = _print_catalog(service, effective_settings, args)
-    if printed == 0:
-        return 0
 
     if args.command != "export":
+        service = _provider_factories()[args.provider](effective_settings)
+        printed = _print_catalog(service, effective_settings, args)
+        if printed == 0:
+            return 0
         parser.error(f"Unsupported command: {args.command}")
 
-    result = _run_single_provider_export(args.provider, settings, args)
+    reporter = _CliProgressReporter()
+    try:
+        result = _run_single_provider_export(args.provider, settings, args, reporter=reporter)
+    finally:
+        reporter.finish()
     print_json(result)
     return 0
 
@@ -634,7 +722,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return _run_provider_command(parser, settings, args)
-    except (ValueError, BrowserBootstrapError, YonseiError, DonggukError, GachonError, HanyangError) as exc:
+    except (ValueError, RuntimeError, BrowserBootstrapError, YonseiError, DonggukError, GachonError, HanyangError) as exc:
         print(_format_runtime_error(args.provider, exc), file=sys.stderr)
         return 2
 

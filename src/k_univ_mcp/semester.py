@@ -64,5 +64,31 @@ def normalize_provider_semester(provider: str, semester: str) -> str:
     return normalized
 
 
+def semester_display_label(semester: str) -> str:
+    normalized = semester.strip()
+    if not normalized:
+        return normalized
+
+    canonical = canonicalize_semester(normalized)
+    if canonical in CANONICAL_SEMESTER_LABELS:
+        return CANONICAL_SEMESTER_LABELS[canonical]
+
+    for provider_map in PROVIDER_SEMESTER_MAPS.values():
+        for canonical_key, provider_code in provider_map.items():
+            if provider_code == normalized and canonical_key in CANONICAL_SEMESTER_LABELS:
+                return CANONICAL_SEMESTER_LABELS[canonical_key]
+
+    return normalized
+
+
+def semester_display_name(semester: str, *, year: str | None = None) -> str:
+    label = semester_display_label(semester)
+    if not label:
+        return label
+    if year:
+        return f"{year}학년도 {label}"
+    return label
+
+
 def semester_help_text() -> str:
     return "Unified semester input: 1, 2, summer, winter (legacy provider codes are still accepted)."

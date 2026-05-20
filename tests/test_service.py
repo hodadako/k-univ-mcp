@@ -217,7 +217,7 @@ def test_collect_courses_normalizes_unified_semester_before_export_fetch() -> No
     assert len(courses) == 1
     assert len(raw_payloads) == 1
     assert raw_payloads[0].semester == "10"
-    assert courses[0].semester == "10"
+    assert courses[0].semester_code == "10"
     assert client.calls == [
         ("campuses", "2026", "10"),
         ("colleges", "2026", "10", "s1"),

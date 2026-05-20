@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from k_univ_mcp.export_runtime import ExportFailureDiagnostic, ExportProgress, FailureCallback, ProgressCallback
 from k_univ_mcp.models import Campus, Course, Department, College, RawPayloadDump
 from k_univ_mcp.providers.soongsil.client import SoongsilClient
 from k_univ_mcp.providers.soongsil.models import SoongsilCatalogEntry
@@ -97,41 +98,37 @@ class SoongsilService:
         for entry, html in self._collect_course_pages(year, resolved_semester, college_code, department_code):
             rows = self.parser.parse_courses(html)
             for row in rows:
-                courses.append(Course(
-                    provider="soongsil",
-                    year=year,
-                    semester=resolved_semester,
-                    semester_name=semester_name,
-                    campus_code=campus_code,
-                    campus_name="숭실",
-                    college_code=entry.college_code,
-                    college_name=entry.college_name,
-                    department_code=entry.department_code,
-                    department_name=entry.department_name,
-                    course_code=row.course_number,
-                    section=row.section,
-                    course_key=f"{entry.department_code}:{row.course_number}-{row.section}",
-                    title=row.course_name,
-                    title_english=None,
-                    professor_name=row.professor,
-                    professor_name_english=None,
-                    lecture_time_raw=row.time_location,
-                    lecture_time_english_raw=None,
-                    classroom=None,
-                    classroom_english=None,
-                    campus_display_name=None,
-                    completion_division_name=row.completion_division_major,
-                    recommended_year=None,
-                    credits=row.time_credits.split("/")[1] if "/" in row.time_credits else None,
-                    recognized_hours=row.time_credits.split("/")[0] if "/" in row.time_credits else None,
-                    course_class_name=None,
-                    evaluation_method_name=None,
-                    cancelled=None,
-                    cancelled_label=None,
-                    established_department_code=entry.department_code,
-                    established_department_name=row.department or entry.department_name,
-                    raw=row.raw
-                ))
+                courses.append(Course(provider="soongsil",
+                year=year, semester_code=resolved_semester, semester_name=semester_name,
+                campus_code=campus_code,
+                campus_name="숭실",
+                college_code=entry.college_code,
+                college_name=entry.college_name,
+                department_code=entry.department_code,
+                department_name=entry.department_name,
+                course_code=row.course_number,
+                section=row.section,
+                course_key=f"{entry.department_code}:{row.course_number}-{row.section}",
+                title=row.course_name,
+                title_english=None,
+                professor_name=row.professor,
+                professor_name_english=None,
+                lecture_time_raw=row.time_location,
+                lecture_time_english_raw=None,
+                classroom=None,
+                classroom_english=None,
+                campus_display_name=None,
+                completion_division_name=row.completion_division_major,
+                recommended_year=None,
+                credits=row.time_credits.split("/")[1] if "/" in row.time_credits else None,
+                recognized_hours=row.time_credits.split("/")[0] if "/" in row.time_credits else None,
+                course_class_name=None,
+                evaluation_method_name=None,
+                cancelled=None,
+                cancelled_label=None,
+                established_department_code=entry.department_code,
+                established_department_name=row.department or entry.department_name,
+                raw=row.raw))
         return courses
 
     def collect_courses(
@@ -141,6 +138,8 @@ class SoongsilService:
         campus_code: str | None = None,
         college_code: str | None = None,
         department_code: str | None = None,
+        progress_callback: ProgressCallback | None = None,
+        failure_callback: FailureCallback | None = None,
     ) -> tuple[list[Course], list[RawPayloadDump]]:
         resolved_semester = normalize_provider_semester("soongsil", semester)
         campus_code = campus_code or "soongsil"
@@ -151,44 +150,76 @@ class SoongsilService:
         raw_payloads: list[RawPayloadDump] = []
         semester_name = self._semester_name(year, semester)
 
-        for entry, html in self._collect_course_pages(year, resolved_semester, selected_univ_code, selected_faculty_code):
-            rows = self.parser.parse_courses(html)
+        try:
+            page_pairs = self._collect_course_pages(year, resolved_semester, selected_univ_code, selected_faculty_code)
+        except Exception as exc:
+            if failure_callback is not None:
+                failure_callback(
+                    ExportFailureDiagnostic(
+                        provider="soongsil",
+                        stage="collect_course_pages",
+                        error_type=type(exc).__name__,
+                        message=str(exc),
+                        year=year,
+                        semester=resolved_semester,
+                        campus_code=campus_code,
+                        college_code=selected_univ_code,
+                        department_code=selected_faculty_code,
+                    )
+                )
+            raise
+
+        for current, (entry, html) in enumerate(page_pairs, start=1):
+            try:
+                rows = self.parser.parse_courses(html)
+            except Exception as exc:
+                if failure_callback is not None:
+                    failure_callback(
+                        ExportFailureDiagnostic(
+                            provider="soongsil",
+                            stage="parse_courses",
+                            error_type=type(exc).__name__,
+                            message=str(exc),
+                            year=year,
+                            semester=resolved_semester,
+                            campus_code=campus_code,
+                            college_code=entry.college_code,
+                            department_code=entry.department_code,
+                        )
+                    )
+                raise
             for row in rows:
-                courses.append(Course(
-                    provider="soongsil",
-                    year=year,
-                    semester=resolved_semester,
-                    semester_name=semester_name,
-                    campus_code=campus_code,
-                    campus_name="숭실",
-                    college_code=entry.college_code,
-                    college_name=entry.college_name,
-                    department_code=entry.department_code,
-                    department_name=entry.department_name,
-                    course_code=row.course_number,
-                    section=row.section,
-                    course_key=f"{entry.department_code}:{row.course_number}-{row.section}",
-                    title=row.course_name,
-                    title_english=None,
-                    professor_name=row.professor,
-                    professor_name_english=None,
-                    lecture_time_raw=row.time_location,
-                    lecture_time_english_raw=None,
-                    classroom=None,
-                    classroom_english=None,
-                    campus_display_name=None,
-                    completion_division_name=row.completion_division_major,
-                    recommended_year=None,
-                    credits=row.time_credits.split("/")[1] if "/" in row.time_credits else None,
-                    recognized_hours=row.time_credits.split("/")[0] if "/" in row.time_credits else None,
-                    course_class_name=None,
-                    evaluation_method_name=None,
-                    cancelled=None,
-                    cancelled_label=None,
-                    established_department_code=entry.department_code,
-                    established_department_name=row.department or entry.department_name,
-                    raw=row.raw,
-                ))
+                courses.append(Course(provider="soongsil",
+                year=year, semester_code=resolved_semester, semester_name=semester_name,
+                campus_code=campus_code,
+                campus_name="숭실",
+                college_code=entry.college_code,
+                college_name=entry.college_name,
+                department_code=entry.department_code,
+                department_name=entry.department_name,
+                course_code=row.course_number,
+                section=row.section,
+                course_key=f"{entry.department_code}:{row.course_number}-{row.section}",
+                title=row.course_name,
+                title_english=None,
+                professor_name=row.professor,
+                professor_name_english=None,
+                lecture_time_raw=row.time_location,
+                lecture_time_english_raw=None,
+                classroom=None,
+                classroom_english=None,
+                campus_display_name=None,
+                completion_division_name=row.completion_division_major,
+                recommended_year=None,
+                credits=row.time_credits.split("/")[1] if "/" in row.time_credits else None,
+                recognized_hours=row.time_credits.split("/")[0] if "/" in row.time_credits else None,
+                course_class_name=None,
+                evaluation_method_name=None,
+                cancelled=None,
+                cancelled_label=None,
+                established_department_code=entry.department_code,
+                established_department_name=row.department or entry.department_name,
+                raw=row.raw,))
             raw_payloads.append(
                 RawPayloadDump(
                     provider="soongsil",
@@ -200,6 +231,18 @@ class SoongsilService:
                     payload=[{"college": entry.college_name, "department": entry.department_name, "html_length": len(html), "course_count": len(rows)}],
                 )
             )
+            if progress_callback is not None:
+                progress_callback(
+                    ExportProgress(
+                        provider="soongsil",
+                        current=current,
+                        total=len(page_pairs),
+                        label=f"{entry.college_name} / {entry.department_name}",
+                        campus_code=campus_code,
+                        college_code=entry.college_code,
+                        department_code=entry.department_code,
+                    )
+                )
 
         unique_courses: dict[tuple[str | None, str | None, str | None], Course] = {}
         for course in courses:
