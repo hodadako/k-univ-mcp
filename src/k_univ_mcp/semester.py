@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import re
 
 CANONICAL_SEMESTER_LABELS: dict[str, str] = {
     "1": "1학기",
@@ -69,6 +70,14 @@ def semester_display_label(semester: str) -> str:
     if not normalized:
         return normalized
 
+    year_prefixed_match = re.fullmatch(r"\d{4}-(1학기|2학기|여름학기|겨울학기)", normalized)
+    if year_prefixed_match:
+        return year_prefixed_match.group(1)
+
+    academic_year_match = re.fullmatch(r"\d{4}학년도\s*(1학기|2학기|여름학기|겨울학기)", normalized)
+    if academic_year_match:
+        return academic_year_match.group(1)
+
     canonical = canonicalize_semester(normalized)
     if canonical in CANONICAL_SEMESTER_LABELS:
         return CANONICAL_SEMESTER_LABELS[canonical]
@@ -82,12 +91,8 @@ def semester_display_label(semester: str) -> str:
 
 
 def semester_display_name(semester: str, *, year: str | None = None) -> str:
-    label = semester_display_label(semester)
-    if not label:
-        return label
-    if year:
-        return f"{year}학년도 {label}"
-    return label
+    _ = year
+    return semester_display_label(semester)
 
 
 def semester_help_text() -> str:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from k_univ_mcp.models import Course, MeetingSlot
+from k_univ_mcp.semester import semester_display_name
 from k_univ_mcp.providers.yonsei.models import YonseiCourseRow
 
 DAY_NAME_MAP = {
@@ -77,7 +78,7 @@ def build_course(
 ) -> Course:
     meeting_slots, parse_warnings = parse_meeting_slots(row.payload.get("lctreTimeNm"))
     return Course(provider="yonsei",
-    year=year, semester_code=semester, semester_name=row.payload.get("syySmtDivNm"),
+    year=year, semester_code=semester, semester_name=semester_display_name(row.payload.get("syySmtDivNm") or semester),
     campus_code=campus_code,
     campus_name=campus_name,
     college_code=college_code,

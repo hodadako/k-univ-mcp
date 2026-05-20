@@ -7,7 +7,7 @@ from k_univ_mcp.models import Campus, Course, Department, College, RawPayloadDum
 from k_univ_mcp.providers.soongsil.client import SoongsilClient
 from k_univ_mcp.providers.soongsil.models import SoongsilCatalogEntry
 from k_univ_mcp.providers.soongsil.parser import SoongsilParser
-from k_univ_mcp.semester import CANONICAL_SEMESTER_LABELS, canonicalize_semester, normalize_provider_semester
+from k_univ_mcp.semester import normalize_provider_semester, semester_display_name
 from k_univ_mcp.settings import AppSettings
 
 
@@ -257,13 +257,8 @@ class SoongsilService:
         return self._catalog_cache[key]
 
     def _semester_name(self, year: str, semester: str) -> str:
-        canonical = canonicalize_semester(semester)
-        label = CANONICAL_SEMESTER_LABELS.get(canonical)
-        if label is not None:
-            return f"{year}학년도 {label}"
-        if semester.endswith("학기"):
-            return f"{year}학년도 {semester}"
-        return f"{year}학년도 {semester}학기"
+        _ = year
+        return semester_display_name(semester)
 
     def _collect_course_pages(
         self,

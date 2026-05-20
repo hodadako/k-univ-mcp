@@ -40,7 +40,7 @@ def test_build_course_maps_yonsei_fields() -> None:
                 "rmvlcYnNm": "정상",
                 "estblDeprtCd": "D001",
                 "estblDeprtNm": "컴퓨터과학과",
-                "syySmtDivNm": "1학기",
+                "syySmtDivNm": "2026-1학기",
             }
         ),
         year="2026",
@@ -57,6 +57,7 @@ def test_build_course_maps_yonsei_fields() -> None:
     assert course.course_key == "YON101-01"
     assert course.classroom == "백양관 101"
     assert course.professor_name_english == "Hong Gil-dong"
+    assert course.semester_name == "1학기"
     assert [(slot.day_code, slot.period) for slot in course.meeting_slots] == [
         ("MON", 1),
         ("MON", 2),

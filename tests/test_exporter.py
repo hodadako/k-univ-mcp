@@ -125,7 +125,7 @@ def make_root() -> MemoryPath:
 
 def make_course(*, provider: str, semester: str, course_code: str, title: str, campus_code: str, campus_name: str, college_code: str, college_name: str, department_code: str, department_name: str, raw: dict[str, object]) -> Course:
     return Course(provider=provider,
-    year="2026", semester_code=semester, semester_name="2026-1학기" if provider == "yonsei" else "1학기",
+    year="2026", semester_code=semester, semester_name="1학기",
     campus_code=campus_code,
     campus_name=campus_name,
     college_code=college_code,

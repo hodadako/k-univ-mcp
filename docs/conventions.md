@@ -50,6 +50,8 @@
 - `provider`, `year`, `semester_code`, `campus_code`, `college_code`, `department_code`는 가능한 한 항상 채운다.
 - `semester_code`는 provider가 실제로 사용하는 학기 코드 또는 정규화된 학기 식별자다.
 - `semester_name`은 사용자가 읽을 수 있는 대표 학기명이다. raw provider 코드(`COMM063.10` 같은 값)를 그대로 노출하지 않는다.
+- `semester_name` 형식은 연도 없이 짧은 대표 학기명으로 통일한다. 예: `1학기`, `2학기`, `여름학기`, `겨울학기`.
+- `2026-1학기`, `2026학년도 1학기` 같은 연도 포함 표기는 `semester_name`에 쓰지 않는다. 연도가 필요하면 별도 `year` 필드를 함께 본다.
 - `campus_name`, `college_name`, `department_name`은 각각 상위 조직의 사용자 노출 이름과 일치시킨다.
 - `course_code`는 학교가 제공하는 공식 과목번호를 우선한다.
 - `section`은 분반 값만 넣고, 과목번호와 합쳐진 문자열 전체를 중복 저장하지 않는다.
