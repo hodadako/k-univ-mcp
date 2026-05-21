@@ -273,8 +273,8 @@ class YonseiClient:
         raise YonseiTransportError(f"Yonsei request failed for {path} without a response payload.")
 
     def _validate_faculties_payload(self, payload: dict[str, Any]) -> None:
-        raw_faculties = payload.get("dsFaclyCd", [])
-        if not isinstance(raw_faculties, list):
+        raw_faculties = payload.get("dsFaclyCd")
+        if raw_faculties is not None and not isinstance(raw_faculties, list):
             raise YonseiUnexpectedResponseError("Yonsei department response did not include a list in dsFaclyCd.")
         if self._is_suspicious_empty_faculty_payload(payload):
             raise YonseiAuthenticationError(
@@ -287,6 +287,27 @@ class YonseiClient:
         if not isinstance(value, list):
             raise YonseiUnexpectedResponseError(f"Yonsei response did not include a list in {key}.")
         return value
+
+    @staticmethod
+    def _is_department_row(value: Any) -> bool:
+        return isinstance(value, dict) and bool(value.get("deptCd")) and bool(value.get("deptNm"))
+
+    def _extract_faculties_list(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        preferred = payload.get("dsFaclyCd")
+        if isinstance(preferred, list) and preferred and all(self._is_department_row(item) for item in preferred):
+            return preferred
+
+        for key, value in payload.items():
+            if key == "dsFaclyCd" or not isinstance(value, list) or not value:
+                continue
+            if all(self._is_department_row(item) for item in value):
+                return value
+
+        if preferred is None:
+            raise YonseiUnexpectedResponseError("Yonsei department response did not include a department list.")
+        if not isinstance(preferred, list):
+            raise YonseiUnexpectedResponseError("Yonsei department response did not include a list in dsFaclyCd.")
+        return preferred
 
     def list_campuses(self, year: str, semester: str) -> list[dict[str, Any]]:
         payload = self._post(
@@ -305,16 +326,16 @@ class YonseiClient:
     def list_faculties(self, year: str, semester: str, campus_code: str, college_code: str) -> list[dict[str, Any]]:
         payload = self._post(
             FACULTIES_PATH,
-            self.common_form_prefix()
-            | {
-                "@d1#syy": year,
-                "@d1#smtDivCd": semester,
-                "@d1#campsBusnsCd": campus_code,
-                "@d1#univCd": college_code,
-            },
+            self.discovery_form(
+                dataset_name="dsFaclyCd",
+                year=year,
+                semester=semester,
+                lv1=campus_code,
+                lv2=college_code,
+            ),
             payload_validator=self._validate_faculties_payload,
         )
-        return self._extract_list(payload, "dsFaclyCd")
+        return self._extract_faculties_list(payload)
 
     def list_courses(
         self,

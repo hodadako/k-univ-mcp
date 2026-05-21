@@ -177,6 +177,58 @@ def test_list_universities_uses_live_discovery_endpoint_with_semester_and_campus
     assert data["@d1#smtDivCd"] == "11"
 
 
+def test_list_faculties_uses_live_discovery_endpoint_with_semester_campus_and_college() -> None:
+    session = FakeSession(
+        [
+            make_response(
+                body=json.dumps({"dsFaclyCd": [{"deptCd": "0301", "deptNm": "수학전공"}]})
+            )
+        ]
+    )
+    client = YonseiClient(
+        cookie_header="JSESSIONID=test; NetFunnel_ID=test",
+        session=cast(requests.Session, cast(object, session)),
+        sleep_seconds=0,
+    )
+
+    departments = client.list_faculties("2026", "10", "s1", "s1103")
+
+    assert departments[0]["deptCd"] == "0301"
+    assert len(session.calls) == 1
+    _, data, _ = session.calls[0]
+    assert data["@d1#dsNm"] == "dsFaclyCd"
+    assert data["@d1#lv1"] == "s1"
+    assert data["@d1#lv2"] == "s1103"
+    assert data["@d1#lv3"] == "%"
+    assert data["@d1#syy"] == "2026"
+    assert data["@d1#smtDivCd"] == "10"
+
+
+def test_list_faculties_uses_fallback_department_list_when_primary_key_is_empty() -> None:
+    session = FakeSession(
+        [
+            make_response(
+                body=json.dumps(
+                    {
+                        "dsFaclyCd": [],
+                        "dsFaclyAlt": [{"deptCd": "0301", "deptNm": "수학전공"}],
+                    }
+                )
+            )
+        ]
+    )
+    client = YonseiClient(
+        cookie_header="JSESSIONID=test; NetFunnel_ID=test",
+        session=cast(requests.Session, cast(object, session)),
+        sleep_seconds=0,
+    )
+
+    departments = client.list_faculties("2026", "10", "s1", "s1103")
+
+    assert departments == [{"deptCd": "0301", "deptNm": "수학전공"}]
+    assert len(session.calls) == 1
+
+
 def test_list_faculties_refreshes_after_abnormal_empty_payload() -> None:
     refreshes: list[str] = []
     session = FakeSession(
