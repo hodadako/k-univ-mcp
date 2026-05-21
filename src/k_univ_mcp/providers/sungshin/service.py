@@ -2,22 +2,26 @@ from __future__ import annotations
 
 from typing import Any
 
+from dataclasses import dataclass
+
 from k_univ_mcp.models import Campus, Course, Faculty, RawPayloadDump, University
 from k_univ_mcp.providers.sungshin.client import SungshinClient
+from k_univ_mcp.providers.sungshin.models import SungshinCourseRow
 from k_univ_mcp.providers.sungshin.parser import build_course
 
-class SungshinService:
-    def __init__(self, client: SungshinClient | None = None):
-        self.client = client or SungshinClient()
 
-    def get_campuses(self, year: str, semester: str):
+@dataclass(slots=True)
+class SungshinService:
+    client: SungshinClient
+
+    def get_campuses(self, *, year: str, semester: str) -> list[Campus]:
         from k_univ_mcp.models import Campus
         return [
             Campus(code="COMM060.1", name="수정"),
             Campus(code="COMM060.2", name="운정"),
         ]
 
-    def get_universities(self, campus_code: str, year: str, semester: str):
+    def get_universities(self, campus_code: str, *, year: str, semester: str) -> list[University]:
         from k_univ_mcp.models import University
         return [
             University(
@@ -30,10 +34,11 @@ class SungshinService:
     def get_faculties(
         self,
         campus_code: str,
-        university_code: str,
+        univ_code: str,
+        *,
         year: str,
         semester: str,
-    ):
+    ) -> list[Faculty]:
         from k_univ_mcp.models import Faculty
 
         data = self.client.onload()
@@ -41,7 +46,7 @@ class SungshinService:
 
         results = []
         for dept in dept_list:
-            if dept.get("orgClsfCd") == university_code:
+            if dept.get("orgClsfCd") == univ_code:
                 name = dept.get("cmnCdNm", "")
                 if name.startswith("[대학]"):
                     name = name[4:]
@@ -49,7 +54,7 @@ class SungshinService:
                 results.append(
                     Faculty(
                         campus_code=campus_code,
-                        university_code=university_code,
+                        university_code=univ_code,
                         code=dept.get("cmnCd", ""),
                         name=name,
                     )
@@ -61,7 +66,7 @@ class SungshinService:
         year: str,
         semester: str,
         campus_code: str,
-        university_code: str,
+        univ_code: str,
         faculty_code: str,
     ) -> list[Course]:
         if semester == "1":
@@ -77,12 +82,12 @@ class SungshinService:
             year=year,
             semester=sem_cd,
             cmp_code=campus_code,
-            org_clsf_code=university_code,
+            org_clsf_code=univ_code,
             dpt_mjr_code=faculty_code,
         )
 
         return [
-            build_course(row, year=year, semester=sem_cd)
+            build_course(SungshinCourseRow(row), year=year, semester=sem_cd)
             for row in rows
         ]
 
@@ -107,11 +112,19 @@ class SungshinService:
         else:
             sem_cd = semester
 
-        campuses = [c for c in self.get_campuses(year, semester) if campus_code in {None, c.code}]
+        campuses = [c for c in self.get_campuses(year=year, semester=semester) if campus_code in {None, c.code}]
         for campus in campuses:
-            universities = [u for u in self.get_universities(campus.code, year, semester) if univ_code in {None, u.code}]
+            universities = [
+                u
+                for u in self.get_universities(campus.code, year=year, semester=semester)
+                if univ_code in {None, u.code}
+            ]
             for university in universities:
-                faculties = [f for f in self.get_faculties(campus.code, university.code, year, semester) if faculty_code in {None, f.code}]
+                faculties = [
+                    f
+                    for f in self.get_faculties(campus.code, university.code, year=year, semester=semester)
+                    if faculty_code in {None, f.code}
+                ]
                 for faculty in faculties:
                     rows = self.client.fetch_courses(
                         year=year,
@@ -132,7 +145,7 @@ class SungshinService:
                         )
                     )
                     for row in rows:
-                        courses.append(build_course(row, year=year, semester=sem_cd))
+                        courses.append(build_course(SungshinCourseRow(row), year=year, semester=sem_cd))
 
         return courses, raw_payloads
 

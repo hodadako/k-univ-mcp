@@ -19,6 +19,13 @@
 - `DONGGUK_ENABLE_BROWSER_BOOTSTRAP=true`가 기본값이라 기본 CLI/MCP 경로에서도 browser bootstrap을 사용합니다.
 - 인증 실패처럼 보이는 JSON payload, HTML 응답, 비정상 응답을 세션 갱신 신호로 보고 재시도합니다.
 
+## 성신여자대학교
+
+- 세션 및 데이터 조회 로직은 `providers/sungshin/client.py`에 있습니다.
+- 성신여대는 별도의 브라우저 부트스트랩 없이 standard HTTP 요청으로 AJAX API를 호출합니다.
+- `onLoad.do`를 통해 초기화 데이터를 받고, `Main.do`를 통해 검색 결과를 JSON으로 수신합니다.
+- 클라이언트 수준에서 `Retry` 로직과 `sleep_seconds`를 통한 Rate Limiting이 적용되어 있습니다.
+
 ## 공통 참고
 
 - Playwright가 설치되어 있어도 Chromium 바이너리가 없으면 browser bootstrap이 실패할 수 있습니다.

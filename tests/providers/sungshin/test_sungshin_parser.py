@@ -1,7 +1,8 @@
+from k_univ_mcp.providers.sungshin.models import SungshinCourseRow
 from k_univ_mcp.providers.sungshin.parser import build_course
 
 def test_build_course():
-    row = {
+    row_data = {
         "sbjNm": "Test Course",
         "sbjEnm": "Test Course En",
         "sbjNo": "AA0001",
@@ -18,6 +19,7 @@ def test_build_course():
         "dptMjrCd": "1234567",
         "opDptmjrNm": "Dept of Test"
     }
+    row = SungshinCourseRow(payload=row_data)
 
     course = build_course(row, year="2025", semester="COMM063.10")
 
