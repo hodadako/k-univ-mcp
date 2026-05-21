@@ -138,16 +138,52 @@ def test_hanyang_service_reads_static_colleges() -> None:
     ]
 
 
-def test_hanyang_service_exposes_default_undergraduate_request_org_codes() -> None:
+def test_hanyang_service_exposes_public_campus_codes_for_undergraduate_and_graduate() -> None:
     client = FakeHanyangClient()
     service = HanyangService(client=cast(HanyangClient, cast(object, client)))
 
-    campuses = service.get_campuses(year="2026", semester="1")
+    campuses = {campus.code: campus for campus in service.get_campuses(year="2026", semester="1")}
 
-    assert {campus.code: campus.raw["defaultRequestOrgCode"] for campus in campuses} == {
-        "seoul": "H0002256",
-        "erica": "Y0000316",
+    assert campuses["seoul"].raw == {
+        "defaultRequestOrgCode": "H0002256",
+        "category": "undergraduate",
+        "sourceCampusCode": "seoul",
     }
+    assert campuses["erica"].raw == {
+        "defaultRequestOrgCode": "Y0000316",
+        "category": "undergraduate",
+        "sourceCampusCode": "erica",
+    }
+    assert campuses["graduate-general"].name == "일반대학원"
+    assert campuses["graduate-general"].raw == {
+        "defaultRequestOrgCode": "H0000476",
+        "category": "graduate",
+    }
+    assert campuses["erica-graduate-innovation"].raw == {
+        "defaultRequestOrgCode": "Y0000223",
+        "category": "graduate",
+        "sourceCampusCode": "erica",
+    }
+
+
+def test_hanyang_service_fetches_courses_for_explicit_graduate_public_campus_code() -> None:
+    client = FakeHanyangClient()
+    service = HanyangService(client=cast(HanyangClient, cast(object, client)))
+
+    courses = service.get_courses(
+        "2026",
+        "1",
+        "graduate-general",
+        "graduate-general",
+        "graduate-general",
+    )
+
+    assert len(courses) == 3
+    assert courses[0].campus_code == "graduate-general"
+    assert courses[0].campus_name == "일반대학원"
+    assert client.find_courses_calls == [
+        ("2026", "10", "H0000476", "P310278", "M006631", "", 0, 500)
+    ]
 
 
 def test_hanyang_service_maps_department_name_to_college() -> None:
@@ -370,3 +406,17 @@ def test_hanyang_service_paginates_course_collection_until_total_count() -> None
     assert len(raw_payloads) == 1
     assert len(raw_payloads[0].payload) == 700
     assert client.find_courses_calls == [(0, 500), (500, 500)]
+
+
+def test_hanyang_service_collect_courses_defaults_to_undergraduate_campuses_only() -> None:
+    client = FakeHanyangClient()
+    service = HanyangService(client=cast(HanyangClient, cast(object, client)))
+
+    courses, raw_payloads = service.collect_courses(year="2026", semester="1")
+
+    assert len(courses) == 6
+    assert [payload.campus_code for payload in raw_payloads] == ["seoul", "erica"]
+    assert client.find_courses_calls == [
+        ("2026", "10", "H0002256", "P310278", "M006631", "", 0, 500),
+        ("2026", "10", "Y0000316", "P310278", "M006631", "", 0, 500),
+    ]
