@@ -37,6 +37,7 @@ PROVIDER_SEMESTER_MAPS: dict[str, Mapping[str, str]] = {
     "soongsil": CANONICAL_SEMESTER_LABELS,
     "hanyang": {"1": "10", "2": "20", "summer": "15", "winter": "25"},
     "dongguk": CANONICAL_SEMESTER_LABELS,
+    "myongji": {"1": "1", "2": "2", "summer": "summer", "winter": "winter"},
 }
 
 
