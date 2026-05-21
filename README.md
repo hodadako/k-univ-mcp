@@ -73,6 +73,9 @@ python -m k_univ_mcp.mcp_server
   - `BROWSER_BOOTSTRAP_TIMEOUT_MS`
   - `BROWSER_READY_SELECTOR`
   - `BROWSER_CLICK_SELECTOR`
+- 요청 관련 환경 변수
+  - `YONSEI_TIMEOUT`
+  - MCP tool 요청의 전체 timeout은 호출하는 MCP client/runtime 쪽에서 별도로 관리될 수 있습니다.
 
 </details>
 
@@ -174,7 +177,9 @@ python -m k_univ_mcp.mcp_server
 - 지원 캠퍼스
   - 서울: public slug `seoul`, default undergraduate request org code `H0002256`
   - ERICA: public slug `erica`, default undergraduate request org code `Y0000316`
-- 학부 외 대학원/기타 조직 선택값은 campus와 분리된 별도 request org mapping으로 관리합니다.
+  - 대학원도 별도 public campus slug로 노출합니다. 예: `graduate-general`, `graduate-business`, `graduate-law`, `erica-graduate-innovation`
+- 학부 외 대학원 조직은 public campus slug -> request org code 매핑으로 관리합니다.
+- `campuses` 명령은 학부/대학원 slug를 모두 보여주지만, `export`에서 `--campus`를 생략하면 기본 수집 범위는 기존과 같이 학부(`seoul`, `erica`)만 포함합니다.
 - 시작 페이지: `https://portal.hanyang.ac.kr/sugang/sulg.do`
 - 확인된 API 경로
   - 교과목 조회: `/sugang/SgscAct/findSuupSearchSugangSiganpyo.do`

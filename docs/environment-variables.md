@@ -7,7 +7,8 @@
 - `K_UNIV_MCP_OUTPUT_DIR`: 기본 출력 디렉터리
 - `K_UNIV_MCP_TRANSPORT`: MCP 서버 transport (`stdio`, `sse`, `streamable-http`)
 - `BROWSER`: 브라우저 실행 모드 (`headless`, `headed`)
-- `BROWSER_BOOTSTRAP_TIMEOUT_MS`: 브라우저 세션 확보 대기 시간(ms)
+- `BROWSER_BOOTSTRAP_TIMEOUT_MS`: 브라우저 세션 확보 대기 시간(ms). 기본값은 `120000`입니다.
+- MCP tool 요청의 전체 timeout은 이 서버 설정이 아니라 호출하는 MCP client/runtime에서 관리될 수 있습니다.
 - `BROWSER_READY_SELECTOR`: 브라우저 준비 대기 selector override
 - `BROWSER_CLICK_SELECTOR`: 브라우저 진입 후 클릭 selector override
 - `AUTO_INSTALL_PLAYWRIGHT_BROWSER`: 필요 시 Playwright Chromium 자동 설치 여부
@@ -19,7 +20,7 @@
 - `ENABLE_BROWSER_BOOTSTRAP`: 연세대 browser bootstrap 사용 여부
 - `BROWSER_BOOTSTRAP_ON_START`: 서버 시작 시점에 연세대 세션을 미리 워밍업할지 여부
 - `YONSEI_SESSION_REFRESH_RETRIES`: 세션 만료로 판단됐을 때 재시도 횟수
-- `YONSEI_TIMEOUT`: 요청 timeout(초)
+- `YONSEI_TIMEOUT`: 요청 timeout(초). 기본값은 `120`입니다.
 - `YONSEI_RETRY_TOTAL`: HTTP 재시도 횟수
 - `YONSEI_RETRY_BACKOFF`: HTTP 재시도 backoff
 - `YONSEI_SLEEP_SECONDS`: 요청 사이 대기 시간
