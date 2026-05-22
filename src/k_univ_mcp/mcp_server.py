@@ -8,6 +8,7 @@ from k_univ_mcp.providers.dongguk import create_dongguk_service, export_dongguk_
 from k_univ_mcp.providers.gachon import create_gachon_service
 from k_univ_mcp.providers.hanyang import create_hanyang_service
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.myongji import create_myongji_service
 from k_univ_mcp.providers.soongsil import create_soongsil_service
 from k_univ_mcp.providers.sungshin import create_sungshin_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
@@ -94,6 +95,7 @@ def build_mcp_server(settings: AppSettings | None = None):
     dongguk_service = create_dongguk_service(app_settings)
     gachon_service = create_gachon_service(app_settings)
     inha_service = create_inha_service()
+    myongji_service = create_myongji_service(app_settings)
     sungshin_service = create_sungshin_service(app_settings)
     soongsil_service = create_soongsil_service(app_settings)
     hanyang_service = create_hanyang_service(app_settings)
@@ -103,6 +105,7 @@ def build_mcp_server(settings: AppSettings | None = None):
         ("dongguk", dongguk_service),
         ("gachon", gachon_service),
         ("inha", inha_service),
+        ("myongji", myongji_service),
         ("sungshin", sungshin_service),
         ("soongsil", soongsil_service),
         ("hanyang", hanyang_service),
@@ -112,6 +115,7 @@ def build_mcp_server(settings: AppSettings | None = None):
     _register_export_tool(server, "yonsei", yonsei_service)
     _register_export_tool(server, "gachon", gachon_service)
     _register_export_tool(server, "inha", inha_service)
+    _register_export_tool(server, "myongji", myongji_service)
     _register_export_tool(server, "sungshin", sungshin_service)
     _register_export_tool(server, "soongsil", soongsil_service)
     _register_export_tool(server, "hanyang", hanyang_service)

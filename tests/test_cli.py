@@ -239,6 +239,61 @@ def test_hanyang_doctor_reports_zero_config_ready(monkeypatch, capsys) -> None:
     assert any("built-in defaults" in hint for hint in payload["hints"])
 
 
+def test_myongji_doctor_reports_ready_without_special_runtime(monkeypatch, capsys) -> None:
+    monkeypatch.delenv("MYONGJI_TIMEOUT", raising=False)
+
+    exit_code = cli.main(["myongji", "doctor"])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert payload["provider"] == "myongji"
+    assert payload["ready"] is True
+    assert payload["hints"] == []
+
+
+def test_myongji_export_uses_standard_provider_flow(monkeypatch, capsys, tmp_path: Path) -> None:
+    class RecordingService:
+        def collect_courses(
+            self,
+            *,
+            year: str,
+            semester: str,
+            campus_code=None,
+            college_code=None,
+            department_code=None,
+            progress_callback=None,
+            failure_callback=None,
+        ):
+            _ = (campus_code, college_code, department_code, failure_callback)
+            assert progress_callback is not None
+            progress_callback(ExportProgress(provider="myongji", current=1, total=1, label="2026 / 1"))
+            return [{"provider": "myongji", "year": year, "semester_code": semester, "semester_name": "1학기"}], []
+
+    monkeypatch.setattr(cli, "create_myongji_service", lambda settings: RecordingService())
+    monkeypatch.setattr(cli, "export_courses", lambda courses, outdir, stem, raw_payloads=None: [str(outdir / f"{stem}.json")])
+
+    exit_code = cli.main([
+        "myongji",
+        "export",
+        "--year",
+        "2026",
+        "--semester",
+        "1",
+        "--campus",
+        "inmun",
+        "--outdir",
+        str(tmp_path),
+    ])
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert payload["row_count"] == 1
+    assert "[loading.............]" in captured.err
+    assert "[####################] 100%" in captured.err
+
+
 def test_dongguk_bootstrap_prints_session_payload(monkeypatch, capsys) -> None:
     monkeypatch.setattr(cli, "_bootstrap_dongguk_session", lambda settings: {
         "provider": "dongguk",
@@ -348,6 +403,7 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
     monkeypatch.setattr(cli, "create_dongguk_service", lambda settings: object())
     monkeypatch.setattr(cli, "create_gachon_service", lambda settings: RecordingService("gachon"))
     monkeypatch.setattr(cli, "create_inha_service", lambda: RecordingService("inha"))
+    monkeypatch.setattr(cli, "create_myongji_service", lambda settings: RecordingService("myongji"))
     monkeypatch.setattr(cli, "create_sungshin_service", lambda settings: RecordingService("sungshin"))
     monkeypatch.setattr(cli, "create_soongsil_service", lambda settings: RecordingService("soongsil"))
     monkeypatch.setattr(cli, "create_hanyang_service", lambda settings: RecordingService("hanyang"))
@@ -389,8 +445,8 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert exit_code == 0
-    assert payload["provider_count"] == 7
-    assert payload["row_count"] == 9
+    assert payload["provider_count"] == 8
+    assert payload["row_count"] == 10
     assert list(payload["providers"].keys()) == [
         "yonsei",
         "dongguk",
@@ -399,8 +455,9 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
         "sungshin",
         "soongsil",
         "hanyang",
+        "myongji",
     ]
-    assert len(export_calls) == 6
+    assert len(export_calls) == 7
     assert [call["stem"] for call in export_calls] == [
         "yonsei_2026_1",
         "gachon_2026_1",
@@ -408,6 +465,7 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
         "sungshin_2026_1",
         "soongsil_2026_1",
         "hanyang_2026_1",
+        "myongji_2026_1",
     ]
     assert [call["outdir"] for call in export_calls] == [
         str(tmp_path / "yonsei"),
@@ -416,6 +474,7 @@ def test_all_export_reuses_provider_exports(monkeypatch, capsys, tmp_path: Path)
         str(tmp_path / "sungshin"),
         str(tmp_path / "soongsil"),
         str(tmp_path / "hanyang"),
+        str(tmp_path / "myongji"),
     ]
     assert "yonsei   [loading.............]" in captured.err
     assert "dongguk  [loading.............]" in captured.err
@@ -507,6 +566,7 @@ def test_all_export_surfaces_provider_context_on_failure(monkeypatch, capsys, tm
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "[dongguk] Dongguk export failed" in captured.err
+
 
 
 def test_single_provider_export_prints_progress_bar_to_stderr(monkeypatch, capsys, tmp_path: Path) -> None:

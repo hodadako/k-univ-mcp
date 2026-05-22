@@ -22,6 +22,11 @@
 - `inha_get_departments`
 - `inha_get_courses`
 - `inha_export_courses`
+- `myongji_get_campuses`
+- `myongji_get_colleges`
+- `myongji_get_departments`
+- `myongji_get_courses`
+- `myongji_export_courses`
 - `sungshin_get_campuses`
 - `sungshin_get_colleges`
 - `sungshin_get_departments`

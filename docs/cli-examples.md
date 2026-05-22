@@ -73,6 +73,12 @@ python -m k_univ_mcp.cli hanyang departments --campus graduate-general --college
 python -m k_univ_mcp.cli hanyang courses --year 2026 --semester 1 --campus graduate-general --college graduate-general --department graduate-general
 python -m k_univ_mcp.cli hanyang export --year 2026 --semester winter --campus seoul --outdir out
 python -m k_univ_mcp.cli hanyang export --year 2026 --semester 1 --campus graduate-general --outdir out
+
+python -m k_univ_mcp.cli myongji campuses --year 2026 --semester 1
+python -m k_univ_mcp.cli myongji colleges --campus inmun --year 2026 --semester 1
+python -m k_univ_mcp.cli myongji departments --campus inmun --college all --year 2026 --semester 1
+python -m k_univ_mcp.cli myongji courses --year 2026 --semester 1 --campus inmun --college all --department all
+python -m k_univ_mcp.cli myongji export --year 2026 --semester 1 --campus inmun --outdir out
 ```
 
 구버전 CLI 호환을 위해 `universities`/`faculties`, `--univ`, `--faculty`도 별칭으로 계속 받을 수 있지만, 문서와 기본 사용법은 `colleges`/`departments`, `--college`, `--department`를 기준으로 합니다.

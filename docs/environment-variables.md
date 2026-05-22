@@ -59,6 +59,11 @@
 - `SUNGSHIN_TIMEOUT`: 요청 timeout(초)
 - `SUNGSHIN_SLEEP_SECONDS`: 요청 사이 대기 시간
 
+## 명지대학교
+
+- `MYONGJI_TIMEOUT`: 요청 timeout(초)
+- `MYONGJI_SLEEP_SECONDS`: 요청 사이 대기 시간
+
 ## 한양대학교
 
 - `HANYANG_COOKIE`: 수동 세션 쿠키

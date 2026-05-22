@@ -67,6 +67,8 @@ class AppSettings:
     hanyang_pgm_id: str = "P310278"
     hanyang_menu_id: str = "M006631"
     hanyang_tk: str = ""
+    myongji_timeout: int = 30
+    myongji_sleep_seconds: float = 0.5
 
     @classmethod
     def from_env(cls, *, load_env: bool = True) -> "AppSettings":
@@ -141,4 +143,6 @@ class AppSettings:
             hanyang_pgm_id=os.getenv("HANYANG_PGM_ID", "P310278"),
             hanyang_menu_id=os.getenv("HANYANG_MENU_ID", "M006631"),
             hanyang_tk=os.getenv("HANYANG_TK", ""),
+            myongji_timeout=int(os.getenv("MYONGJI_TIMEOUT", "30")),
+            myongji_sleep_seconds=float(os.getenv("MYONGJI_SLEEP_SECONDS", "0.5")),
         )

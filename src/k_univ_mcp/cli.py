@@ -19,6 +19,7 @@ from k_univ_mcp.providers.gachon.client import GachonError
 from k_univ_mcp.providers.hanyang import create_hanyang_service
 from k_univ_mcp.providers.hanyang.client import HanyangError
 from k_univ_mcp.providers.inha import create_inha_service
+from k_univ_mcp.providers.myongji import create_myongji_service
 from k_univ_mcp.providers.soongsil import create_soongsil_service
 from k_univ_mcp.providers.sungshin import create_sungshin_service
 from k_univ_mcp.providers.yonsei import create_yonsei_service
@@ -38,6 +39,7 @@ SUPPORTED_PROVIDERS: tuple[str, ...] = (
     "sungshin",
     "soongsil",
     "hanyang",
+    "myongji",
 )
 
 
@@ -47,6 +49,7 @@ def _provider_factories() -> dict[str, ProviderFactory]:
         "dongguk": create_dongguk_service,
         "gachon": create_gachon_service,
         "inha": lambda _settings: create_inha_service(),
+        "myongji": create_myongji_service,
         "sungshin": create_sungshin_service,
         "soongsil": create_soongsil_service,
         "hanyang": create_hanyang_service,
@@ -243,6 +246,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_common_provider_commands(gachon_parser, provider_label="Gachon")
     _add_common_provider_commands(provider_parser.add_parser("inha", help="Inha provider commands"), provider_label="Inha")
+    _add_common_provider_commands(provider_parser.add_parser("myongji", help="Myongji provider commands"), provider_label="Myongji")
     _add_common_provider_commands(provider_parser.add_parser("sungshin", help="Sungshin provider commands"), provider_label="Sungshin")
     _add_common_provider_commands(provider_parser.add_parser("soongsil", help="Soongsil provider commands"), provider_label="Soongsil")
 

@@ -18,6 +18,7 @@
 | 성신여자대학교 | 수정, 운정 |
 | 숭실대학교 | 숭실 |
 | 한양대학교 | 서울, ERICA |
+| 명지대학교 | 인문, 자연 |
 
 ## 설치
 
@@ -80,6 +81,25 @@ python -m k_univ_mcp.mcp_server
 </details>
 
 <details>
+<summary>명지대학교 (`myongji`)</summary>
+
+- 지원 캠퍼스
+  - 인문: public slug `inmun`
+  - 자연: public slug `jayeon`
+- 현재 구현은 명지대 학사공지 게시판에서 공지를 찾고, 첨부된 PDF 시간표를 파싱하는 방식입니다.
+- 지원 학기
+  - `1`: 1학기 편입생 오리엔테이션 공지에 포함된 강의시간표 PDF 기준
+  - `summer`: 하계 계절수업 공지의 시간표 PDF 기준
+  - `winter`: 동계 계절수업 공지의 시간표 PDF 기준
+  - `2`: 현재 미지원
+- 현재 main 브랜치에서는 CLI와 MCP에서 `myongji` provider 이름으로 조회와 export를 사용할 수 있습니다.
+- 관련 환경 변수
+  - `MYONGJI_TIMEOUT`
+  - `MYONGJI_SLEEP_SECONDS`
+
+</details>
+
+<details>
 <summary>동국대학교 (`dongguk`)</summary>
 
 - 지원 캠퍼스
@@ -105,6 +125,7 @@ python -m k_univ_mcp.mcp_server
 
 </details>
 
+
 <details>
 <summary>가천대학교 (`gachon`)</summary>
 
@@ -129,6 +150,7 @@ python -m k_univ_mcp.mcp_server
 
 </details>
 
+
 <details>
 <summary>인하대학교 (`inha`)</summary>
 
@@ -144,6 +166,7 @@ python -m k_univ_mcp.mcp_server
   - `INHA_SLEEP_SECONDS`
 
 </details>
+
 
 <details>
 <summary>성신여자대학교 (`sungshin`)</summary>
@@ -161,6 +184,7 @@ python -m k_univ_mcp.mcp_server
 
 </details>
 
+
 <details>
 <summary>숭실대학교 (`soongsil`)</summary>
 
@@ -170,6 +194,7 @@ python -m k_univ_mcp.mcp_server
 - College → Department 계층을 동적으로 탐색해 교과목을 조회합니다.
 
 </details>
+
 
 <details>
 <summary>한양대학교 (`hanyang`)</summary>
@@ -194,3 +219,6 @@ python -m k_univ_mcp.mcp_server
   - `HANYANG_SLEEP_SECONDS`
 
 </details>
+
+
+
